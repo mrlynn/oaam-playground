@@ -15,6 +15,15 @@ from .model import Finding, Memory, Pair, Verdict, quote
 
 TRANSIENT_PATTERN = re.compile(
     r"\b(asked|awaiting|waiting for|has not yet|not yet (confirmed|decided)|will (check|follow up)|pending)\b", re.I)
+# Wider, and only for choosing which memories the judge reads: a false match costs
+# one cached judge call, not a false finding, so it can include words like "asks"
+# that TRANSIENT_PATTERN (a finding on its own when there's no judge) must not.
+# The additions come from real use on aim_live ("has asked about X again", "X
+# remains unresolved", "the user asks about..."); on the seed data they add no
+# candidates, so the seeded findings are unchanged.
+JUDGE_PATTERN = re.compile(
+    r"\b(asked|awaiting|waiting for|has not yet|not yet (confirmed|decided)|will (check|follow up)|pending|"
+    r"asks|again|unresolved|remains (open|unanswered|unclear)|as of (this|the latest))\b", re.I)
 CORRECTION_PATTERN = re.compile(
     r"\b(correct(s|ed|ing|ion)|previously|no longer|instead of|changed (from|to)|updated from|replac(es|ed))\b", re.I)
 
@@ -183,9 +192,9 @@ def _near_duplicate(p: Pair, evidence: dict[str, Any], why: str) -> Finding:
 # ---- single memories: transient ------------------------------------------------
 
 def transient_candidates(memories: list[Memory]) -> list[Memory]:
-    """Worth judging: anything matching the pattern, plus every free-form "memory"
+    """Worth judging: anything matching JUDGE_PATTERN, plus every free-form "memory"
     (the type the extractor uses for conversation state)."""
-    return [m for m in memories if TRANSIENT_PATTERN.search(m.content) or m.type == "memory"]
+    return [m for m in memories if JUDGE_PATTERN.search(m.content) or m.type == "memory"]
 
 
 def check_transient(memories: list[Memory], verdicts: dict[str, Verdict | None]) -> list[Finding]:

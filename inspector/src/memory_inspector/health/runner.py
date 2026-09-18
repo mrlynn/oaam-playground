@@ -92,6 +92,7 @@ def run_check(pool, *, user_id: str | None = None, threshold: float = DEFAULT_TH
         judge = Judge(judge_model, DbCache(pool), **({"complete": complete} if complete else {}))
     params = {"threshold": threshold, "judge_versions": [PAIR_VERSION, MEMORY_VERSION] if judge else None,
               "transient_pattern": checks.TRANSIENT_PATTERN.pattern,
+              "judge_pattern": checks.JUDGE_PATTERN.pattern,
               "correction_pattern": checks.CORRECTION_PATTERN.pattern,
               "tables": {"memory": tables.memory, "chunks": tables.chunks, "message": tables.message}}
     try:
