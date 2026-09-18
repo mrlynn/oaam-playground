@@ -184,7 +184,7 @@ for f in report.findings:
 A `Finding` has `kind`, `severity`, `title`, `detail`, `suggestion`, `method` (`sql`, `pattern`, `llm`, or a combination such as `sql+llm`), `user_id`, `memory_ids`, `turns`, `evidence`, an optional `subject`, and a `fingerprint`. The finding kinds and their rules are in [the health checks explanation](../explanation/health-checks.md#3-checks-are-plain-functions).
 
 Constants you can reuse:
-- `memory_inspector.health.checks.EXTRACTION_INSTRUCTIONS`: the tested `memory_extraction_custom_instructions` wording that stops transient memories.
+- `memory_inspector.health.checks.EXTRACTION_INSTRUCTIONS`: the tested `memory_extraction_custom_instructions` wording that stops most transient memories. Pass it as `memory_extraction_config=MemoryExtractionConfig(memory_extraction_custom_instructions=...)`: passing it straight to `create_thread` is deprecated.
 - `TRANSIENT_PATTERN` and `CORRECTION_PATTERN`: the regular expressions used without a judge.
 - `memory_inspector.health.judge.PAIR_VERSION` and `MEMORY_VERSION`: the current prompt versions (`pair-v3`, `memory-v2`).
 

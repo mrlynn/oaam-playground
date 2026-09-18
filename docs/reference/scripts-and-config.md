@@ -58,7 +58,7 @@ Experiments whose results the design depends on. Rerun them when the thing they 
 | spike | measures | rerun when |
 |---|---|---|
 | `search_metric.py` | which metric `search`'s distance uses (COSINE, exactly) | the package or embedder changes |
-| `custom_instructions.py` | whether `memory_extraction_custom_instructions` stops transient and stale memories (transient yes, stale no). Uses throwaway users and deletes them. | the package or the instruction wording changes |
+| `custom_instructions.py` | whether `memory_extraction_custom_instructions` stops transient and stale memories (transient mostly, stale no). `--compare` tests the first wording against the shipped one, with a probe that repeats an unanswered question. Uses throwaway users and deletes them. | the package or the instruction wording changes |
 | `judge_agreement.py` | the health check's judge against 11 hand-labelled pairs (`inspector/tests/fixtures/judge_pairs.json`) | `PAIR_VERSION` or the judge model changes. Pass model ids as arguments. |
 
 ## Companion (`companion/`)

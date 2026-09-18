@@ -110,7 +110,8 @@ def test_transient_needs_the_judge_to_agree_when_there_is_one():
     found = checks.check_transient([ASKED, plain], {"asked": v("transient"), "m": v("durable")})
     (f,) = found
     assert f.memory_ids == ["asked"] and f.method == "pattern+llm"
-    assert "memory_extraction_custom_instructions" in f.suggestion and "corrects us-east-1" in f.suggestion
+    assert "MemoryExtractionConfig(memory_extraction_custom_instructions=" in f.suggestion
+    assert "corrects us-east-1" in f.suggestion
 
 
 def test_transient_by_pattern_alone_says_so():
