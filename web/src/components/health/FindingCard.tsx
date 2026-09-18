@@ -37,8 +37,9 @@ type Props = {
 export default function FindingCard({ finding: f, status, memories, origins }: Props) {
   const ev = f.evidence ?? {};
   const ids = f.kind === "orphan_chunks" ? [] : (f.memory_ids ?? []);
+  const supersededBy = new Set(((ev.superseded_by as { id: string }[] | undefined) ?? []).map((s) => s.id));
   const role = (id: string): string | null =>
-    ev.stale === id ? "stale" : ev.current === id ? "current" : ev.keep === id ? "keep" : null;
+    ev.stale === id ? "stale" : ev.current === id || supersededBy.has(id) ? "current" : ev.keep === id ? "keep" : null;
 
   return (
     <Paper id={`finding-${f.finding_id}`} sx={{ p: 2, scrollMarginTop: 80, "&:target": { outline: 2, outlineColor: "primary.main" } }}>

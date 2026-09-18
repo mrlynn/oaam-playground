@@ -71,14 +71,18 @@ def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | Non
         return x
 
     dup_pairs: list[tuple[Pair, Verdict]] = []
+    # stale id -> [(pair, current, method, evidence)]: one finding per stale memory,
+    # however many later memories supersede it.
+    superseding: dict[str, list[tuple[Pair, Memory, str, dict[str, Any]]]] = defaultdict(list)
+    stale_memory: dict[str, Memory] = {}
     for p in pairs:
         v = verdicts.get((p.older.id, p.newer.id))
         base = {"distance": round(p.distance, 4)}
         if v is None:  # no judge: a correction phrase is the only signal we trust
             if CORRECTION_PATTERN.search(p.newer.content):
-                out.findings.append(_superseded(p, stale=p.older, current=p.newer, method="sql+pattern",
-                                                evidence={**base, "pattern": CORRECTION_PATTERN.search(p.newer.content)[0]}))
-                out.stale[p.older.id] = p.newer.id
+                superseding[p.older.id].append(
+                    (p, p.newer, "sql+pattern", {**base, "pattern": CORRECTION_PATTERN.search(p.newer.content)[0]}))
+                stale_memory[p.older.id] = p.older
             else:
                 out.findings.append(_near_duplicate(p, base, "not judged (run with a judge model to classify)"))
             continue
@@ -86,8 +90,8 @@ def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | Non
                                       "model": v.model}}
         if v.relation == "supersedes":
             stale, current = (p.older, p.newer) if v.current == "newer" else (p.newer, p.older)
-            out.findings.append(_superseded(p, stale=stale, current=current, method="sql+llm", evidence=evidence))
-            out.stale[stale.id] = current.id
+            superseding[stale.id].append((p, current, "sql+llm", evidence))
+            stale_memory[stale.id] = stale
         elif v.relation == "contradicts":
             out.findings.append(_finding(
                 "contradiction", user_id=p.older.user_id, memory_ids=[p.older.id, p.newer.id],
@@ -103,6 +107,10 @@ def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | Non
         elif v.relation == "unparsed":
             out.findings.append(_near_duplicate(p, evidence, "the judge's reply could not be read"))
         # complementary and unrelated: nothing to report
+
+    for stale_id, found in superseding.items():
+        out.findings.append(_superseded(stale_memory[stale_id], found))
+        out.stale[stale_id] = found[0][1].id
 
     clusters: dict[str, list[Memory]] = defaultdict(list)
     judged: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -129,18 +137,28 @@ def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | Non
     return out
 
 
-def _superseded(p: Pair, *, stale: Memory, current: Memory, method: str, evidence: dict[str, Any]) -> Finding:
+def _superseded(stale: Memory, found: list[tuple[Pair, Memory, str, dict[str, Any]]]) -> Finding:
+    """One finding per stale memory, listing every later memory that supersedes it."""
+    found = sorted(found, key=lambda f: f[0].distance)
+    pair, current, method, evidence = found[0]
+    others = len(found) - 1
     return _finding(
-        "superseded", user_id=stale.user_id, memory_ids=[stale.id, current.id],
+        "superseded", user_id=stale.user_id, memory_ids=[stale.id] + [c.id for _, c, _, _ in found],
         title=f"Stale memory still stored: {quote(stale.content, 80)}",
-        detail=(f"It was superseded by {quote(current.content, 110)}, but both are stored and both can be retrieved: "
-                f"they sit {p.distance:.3f} apart (cosine), so a search for one usually returns the other. "
+        detail=(f"It was superseded by {quote(current.content, 110)}"
+                + (f" (and {others} more later memor{'y' if others == 1 else 'ies'})" if others else "")
+                + ", but it is still stored and still retrievable: "
+                f"it sits {pair.distance:.3f} from its replacement (cosine), so a search for one usually returns the other. "
                 "Extraction appends corrections instead of revising the earlier memory."),
         suggestion=("Read both first: if the stale memory holds details the current one lacks, fold them in, then "
                     "delete the stale one.\n"
                     f'memory.update_memory("{current.id}", content="…")  # only if something would be lost\n'
                     + _delete([stale.id])),
-        method=method, evidence={**evidence, "stale": stale.id, "current": current.id})
+        method=method,
+        evidence={**evidence, "stale": stale.id, "current": current.id,
+                  "superseded_by": [{"id": c.id, "distance": round(p.distance, 4), "method": m,
+                                     **({"rationale": e["judge"]["rationale"]} if e.get("judge") else {})}
+                                    for p, c, m, e in found]})
 
 
 def _near_duplicate(p: Pair, evidence: dict[str, Any], why: str) -> Finding:

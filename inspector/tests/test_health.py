@@ -50,6 +50,16 @@ def test_superseded_names_the_stale_memory_and_how_to_delete_it():
     assert out.stale == {"east": "west"}
 
 
+def test_one_stale_memory_superseded_twice_is_one_finding():
+    fixed = mem("fixed", "Bucket was previously stated as us-east-1; it is us-west-2.", minutes=3)
+    pairs = [pair(EAST, WEST, 0.042), pair(EAST, fixed, 0.06)]
+    out = checks.check_pairs(pairs, {("east", "west"): v("supersedes", "newer"), ("east", "fixed"): v("supersedes", "newer")})
+    (f,) = out.findings
+    assert f.memory_ids == ["east", "west", "fixed"] and f.evidence["current"] == "west"
+    assert [s["id"] for s in f.evidence["superseded_by"]] == ["west", "fixed"]
+    assert "and 1 more later memory" in f.detail
+
+
 def test_supersedes_the_other_way_round():
     out = checks.check_pairs([pair(EAST, WEST, 0.04)], {("east", "west"): v("supersedes", "older")})
     assert out.stale == {"west": "east"}

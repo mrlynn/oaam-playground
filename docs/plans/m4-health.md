@@ -252,3 +252,17 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
 - **Pure layout** is in `lib/lifecycle.ts` (`waterfall`, `stageTotals`, `sumPointExtras`), with 7 `node --test` cases. There are 23 web tests in total.
 - **Seen on the seeds.** Turn 3 of support_01 (the correction) is 12.4 s of package work: a 1.6 s context-summary LLM call, a 65 ms past-memory lookup, a **9.5 s extraction LLM call**, and a 179 ms store write. The companion's "remembering…" pause is almost entirely one LLM call. Extraction created 5 memories and revised none.
 - **Verified:** 1440 px dark, and 375 px light with no horizontal scroll. 404s for turns 0, 99 and "abc" and for a bogus run. No console errors. `npm run build` is deferred to the end-of-M4 checks.
+
+### Step 5 (labs 1–3)
+- **`labs/`** is its own uv project: `labkit.py` holds the plumbing (connection, a lab user per notebook with `LAB_SUFFIX`, replay one exchange at a time, printing, `check`), with three notebooks and a README. The notebooks are generated from cell lists and committed **without outputs**. The plan's `_setup.py` became `labkit.py`.
+- **All three execute cold** under `nbconvert --execute` against `aim_app`. Lab 3 was run twice.
+  - **Lab 1:** Sam's Slack preference is extracted, stored on the thread; the explicit fact is at user level; search ranks the preference first (cosine 0.277); the check reports only `scope_mismatch`.
+  - **Lab 2:** without instructions, 9 memories including 2 transient; with the tested instructions, 5 memories and 0 transient. `superseded` survives either way (append-only). The user boundary holds. Deleting the thread took 9 memories to 0, and the preference copied to user level survived.
+  - **Lab 3:** the mixed question never has the preference in its top 10. The check finds a crowded turn, stale, duplicate and transient memories. Deleting what it names (8–10 memories) resolves all targeted findings. The preference rises to rank 8–10 in the mixed question, and **rank 1 asked alone**.
+- **Changes from running them:**
+  - Lab 3's promise that cleanup gets the preference "into the top 5" was wrong. It moved up but not that far. Part 5 now says so, and a new **part 6 (split the question)** teaches the retrieval judgment that fixes it.
+  - The package's sync-in-Jupyter deadlock warning is filtered in `labkit`, with a friction entry.
+  - Cells no longer echo return values.
+  - The contact-preference regex was tightened so it doesn't match the narrower task-notification preference.
+- **Library change prompted by lab 3:** one stale memory superseded by two later memories produced two `superseded` findings. It's now **one finding per stale memory**, with `evidence.superseded_by` listing every replacement. The dashboard marks each of them "current". 76 library tests pass.
+- **Not done:** sharing a draft with Anant is yours to do. The notebooks have not been reviewed on a machine other than this one.
