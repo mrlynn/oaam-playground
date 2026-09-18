@@ -13,7 +13,7 @@ def test_split_keeps_inline_comments():
 
 def test_scripts_are_bundled_in_apply_order():
     names = [name for name, _ in bundled_scripts()]
-    assert names == ["30_runlog.sql", "40_runlog_views.sql"]
+    assert names == ["30_runlog.sql", "40_runlog_views.sql", "50_health.sql", "60_health_views.sql"]
 
 
 def test_every_object_is_created_idempotently():

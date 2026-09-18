@@ -10,8 +10,8 @@ import re
 from dataclasses import dataclass, field
 from importlib.resources import files
 
-VIEWS = ("AIM_V_RUNS", "AIM_V_TURNS", "AIM_V_RUN_EVENTS", "AIM_V_MEMORY_RETRIEVALS")
-TABLES = ("AIM_RUNS", "AIM_TURNS", "AIM_RUN_EVENTS")
+VIEWS = ("AIM_V_RUNS", "AIM_V_TURNS", "AIM_V_RUN_EVENTS", "AIM_V_MEMORY_RETRIEVALS", "AIM_V_CHECK_RUNS", "AIM_V_FINDINGS")
+TABLES = ("AIM_RUNS", "AIM_TURNS", "AIM_RUN_EVENTS", "AIM_CHECK_RUNS", "AIM_FINDINGS", "AIM_JUDGMENTS")
 
 _IDENTIFIER = re.compile(r"^[A-Za-z][A-Za-z0-9_$#]{0,127}$")
 

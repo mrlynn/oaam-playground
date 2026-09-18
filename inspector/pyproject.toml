@@ -11,6 +11,10 @@ dependencies = [
     "oracledb>=3.4.2",
 ]
 
+[project.optional-dependencies]
+# The health check's LLM judge. Without it, `check --no-judge` still runs the deterministic checks.
+judge = ["litellm>=1.101"]
+
 [project.scripts]
 memory-inspector = "memory_inspector.cli:main"
 

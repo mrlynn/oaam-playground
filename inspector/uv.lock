@@ -928,6 +928,11 @@ dependencies = [
     { name = "oracledb" },
 ]
 
+[package.optional-dependencies]
+judge = [
+    { name = "litellm" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
@@ -935,9 +940,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "litellm", marker = "extra == 'judge'", specifier = ">=1.101" },
     { name = "oracleagentmemory", specifier = ">=26.6.0,<26.7" },
     { name = "oracledb", specifier = ">=3.4.2" },
 ]
+provides-extras = ["judge"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8" }]

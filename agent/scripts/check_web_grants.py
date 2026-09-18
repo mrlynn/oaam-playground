@@ -29,6 +29,8 @@ MUST_FAIL = [
     ("update through view", "update {s}.aim_v_threads set user_id = user_id"),
     ("delete through run log view", "delete from {s}.aim_v_turns"),
     ("insert into run log", "insert into {s}.aim_runs (run_id) values ('x')"),
+    ("read findings table", "select count(*) from {s}.aim_findings"),
+    ("read judge cache", "select count(*) from {s}.aim_judgments"),
 ]
 
 

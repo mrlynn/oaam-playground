@@ -2,7 +2,7 @@
 
 See what an [Oracle AI Agent Memory](https://pypi.org/project/oracleagentmemory/) agent remembers, retrieves and revises, turn by turn.
 
-Status: **milestone 3, step 2**. The run log schema, `init`, and the `inspect()` wrapper that fills it all work against the real package.
+Status: **milestone 4, step 1**. The run log, the `inspect()` wrapper, and `memory-inspector check` (memory health) all work against the real package.
 
 ## Install the run log
 
@@ -58,5 +58,35 @@ To set the boundary yourself: `with memory.inspector.turn(thread): ...`
 - `*_async` methods pass through unrecorded, with a one-time warning.
 - `delete_user`, `delete_agent` and `update_thread` pass through unrecorded.
 - One writer process per thread at a time.
+
+## Check memory health
+
+```bash
+pip install "memory-inspector[judge]"      # the judge is optional; see below
+memory-inspector check --user aim_app --dsn localhost:1521/FREEPDB1 --judge-model anthropic/claude-sonnet-5
+```
+
+How it works:
+1. `VECTOR_DISTANCE(..., COSINE)` runs inside the database and finds pairs of memories that sit close together. This is the same metric `search` reports.
+2. An LLM judge classifies each pair: duplicate, supersedes, contradicts, complementary or unrelated. It also judges likely conversation-state memories as durable or transient.
+3. Pure checks turn those results into findings, which are written to `AIM_FINDINGS` with evidence and a suggested fix.
+
+| finding | severity | means |
+|---|---|---|
+| `superseded` | high | A memory was corrected or answered later, but the old one is still stored and retrievable. Extraction appends; it never revises. |
+| `contradiction` | high | Two memories disagree, and nothing says which is current. |
+| `crowded_turn` | high | A recorded turn put stale, duplicate or transient memories in the prompt. Reported once per conversation. |
+| `orphan_chunks` | high | Embedded chunks whose record no longer exists. |
+| `duplicate` | medium | The same thing is stored more than once. Reported once per cluster, keeping the most complete copy. |
+| `transient` | medium | Conversation state ("assistant asked…; awaiting reply") stored as durable memory. The fix includes a tested `memory_extraction_custom_instructions` string. |
+| `scope_mismatch` | low | Memories the extractor labelled user-scoped are stored on a thread, so they die with it. |
+| `near_duplicate` | low | A close pair nobody classified: there was no judge, or its reply couldn't be read. |
+
+How the judge behaves:
+- **Verdicts are cached** in `AIM_JUDGMENTS`, keyed by model, prompt version and the exact content judged. A rerun gives the same answer at no cost, and an edited memory is judged again.
+- **Accuracy:** on 11 hand-labelled seed pairs, `claude-sonnet-5` agrees 9–10 of 11. Haiku 4.5 also scores 9, but it calls a cause/fix pair a duplicate, so it isn't recommended. `agent/spikes/judge_agreement.py` re-measures this.
+- **Without a judge** (`--no-judge`), a pair is only called superseded when the newer memory says it corrects the older one. Everything else is reported as `near_duplicate`, and transient memories are found by pattern only. Each finding's `method` says how it was decided.
+
+Each run is compared with the previous run of the same scope and judge, and reports what's new and what's resolved. Fix a finding in code (for example `memory.delete_memory(...)`) and check again to watch it resolve.
 
 Supported: `oracleagentmemory` 26.6.x on Oracle AI Database 26ai.

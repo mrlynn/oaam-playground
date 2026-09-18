@@ -187,3 +187,25 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
 1. **Judge cost and model.** The seeds need about 11 pair judgments and 34 memory judgments, cached after the first run. Is the default chat model fine, or should the judge use a cheaper one (Haiku 4.5)?
 2. **Real data timing.** Build steps 0–5 now on seeds and validate on `aim_live` at the end (verification 8), or pause after step 1 until a few days of companion use exist? I'd build now, because the seeds already reproduce every finding kind.
 3. **Anant.** Share labs 1–3 as a draft when they run, before polishing?
+
+## As built
+
+### Step 1 (health checks in the library)
+- **Layout:** `memory_inspector/health/` has `model.py` (Memory, Pair, Verdict, Finding), `judge.py` (prompts, cache protocol, injected LLM call), `checks.py` (pure checks), `gather.py` (SQL inputs) and `runner.py` (one check run per call). `sql/50_health.sql` and `60_health_views.sql` are installed by `init`. There's a `check` CLI subcommand, a `[judge]` extra for LiteLLM, and `agent/scripts/check.py` for the demo's `.env` files.
+- **Candidate SQL** is a self-join on the chunk table with `min(VECTOR_DISTANCE(..., COSINE))` per pair, the same user on both sides, and memory types only. Pairs involving expired rows or orphan chunks are dropped in Python.
+- **Transient candidates** are memories matching the pattern plus every free-form `memory`-type memory. That was 7 of 34 on the seeds. Only these are judged.
+- **Two things changed after the first real run**, which was too noisy (9 of 11 turns flagged, plus 2 wrong "transient" verdicts):
+  - `crowded_turn` now counts a turn only if a stale memory reached the prompt or at least 2 slots were wasted, and reports **one finding per conversation**, naming its worst turn.
+  - The memory prompt (v2) says ongoing work and completed actions are durable.
+- **The pair prompt went v1 → v3** ("a broader or narrower restatement of a preference is a duplicate"). Measured with the library's own judge (the spike now imports it), agreement stayed at **9/11**. Tuning stopped there, because two rewordings on one ambiguous pair out of 11 is overfitting.
+  - The two misses are low-harm. A pending question is read as "answered by" a related memory, so it gets flagged as stale when it's transient anyway. A general email preference is read as "broadening" a narrower one.
+  - The labels stayed strict rather than moving toward the model. The gate is met: the contradiction and the complementary pair are both right.
+- **Fingerprints:** kind + memory ids + turns by default. `crowded_turn`, `scope_mismatch` and `orphan_chunks` use a subject instead (the conversation, the user, the store), so they stay the same open finding while their contents change. Otherwise a partial fix showed as resolved plus new with the same title.
+- **New and resolved** compare against the previous run with the same scope **and the same judge model**. A `--no-judge` run compared against a judged one would report every judged finding as resolved.
+- **Verified on the seeded `aim_app`:**
+  - 16 findings: 2 crowded conversations, 2 superseded, 3 duplicate clusters (including the email preference stored 3 times), 5 transient, 2 scope mismatch.
+  - A rerun made 0 judge calls (18 cached) and nothing changed.
+  - `--no-judge` still catches the us-east-1 stale fact by its correction phrase.
+  - Deleting the stale memory with `delete_memory` resolved `superseded` on the next check, the loop lab 3 will teach.
+  - 74 unit tests, 27 of them new; `check_web_grants.py` passes 38/38.
+- **Known false positive:** the task-completion email preference is judged "superseded" by the general one. It's harmless: deleting it keeps the broader rule.
