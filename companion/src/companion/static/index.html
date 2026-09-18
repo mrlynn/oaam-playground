@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Companion</title>
+<title>Chat · Agent Memory Playground</title>
 <style>
   :root {
     --bg: #f7f6f3; --panel: #ffffff; --ink: #1d1c1a; --muted: #6b6862; --line: #e4e1db;
@@ -23,6 +23,11 @@
   header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line);
            background: var(--panel); flex-wrap: wrap; }
   header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header h1 a { color: inherit; text-decoration: none; }
+  #nav { display: flex; gap: 14px; font-size: 14px; }
+  #nav a { color: var(--muted); text-decoration: none; }
+  #nav a:hover { color: var(--ink); }
+  #nav a[aria-current] { color: var(--ink); font-weight: 600; }
   #meta { color: var(--muted); font-size: 13px; font-family: var(--mono); flex: 1; min-width: 0;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
@@ -78,7 +83,13 @@
 </head>
 <body>
 <header>
-  <h1>companion</h1>
+  <h1><a id="home" href="#">Agent Memory Playground</a></h1>
+  <nav id="nav" aria-label="Main" hidden>
+    <a aria-current="page" href="#">Chat</a>
+    <a data-to="/runs" href="#">Runs</a>
+    <a data-to="/memories" href="#">Memory</a>
+    <a data-to="/docs" href="#">Docs</a>
+  </nav>
   <div id="meta">connecting…</div>
   <select id="model" disabled aria-label="Model" title="Writes the replies and extracts the memories. Changing it starts a new thread."></select>
   <button id="whyBtn" type="button" disabled title="What the last reply was built from">why</button>
@@ -119,19 +130,32 @@
   };
   const scroll = () => { log.scrollTop = log.scrollHeight; };
   const short = (id) => id ? id.slice(0, 8) + "…" : "";
-  const dash = (path) => info && info.dashboard_url ? info.dashboard_url + path : null;
+  // Served at "/" on its own, or at "/chat" behind the inspector (./demo.sh), where the
+  // inspector and docs share this origin and the schema is the same by construction.
+  const BASE = location.pathname.replace(/\/+$/, "");
+  const EMBEDDED = BASE !== "";
+  const dash = (path) => EMBEDDED ? path : (info && info.dashboard_url ? info.dashboard_url + path : null);
+  const hasDash = () => dash("") !== null;  // "" is a real base behind the proxy
   const dashLink = (href, text) => {
     const a = el("a", null, text);
-    a.href = href; a.target = "_blank"; a.rel = "noopener";
-    a.title = "Opens the inspector dashboard. It must read this schema (AIM_SCHEMA=" + info.db_user.toUpperCase() + ").";
+    a.href = href; a.target = "_blank"; a.rel = "noopener";  // keep the chat open
+    a.title = EMBEDDED ? "Opens in the inspector, in a new tab"
+      : "Opens the inspector dashboard. It must read this schema (AIM_SCHEMA=" + info.db_user.toUpperCase() + ").";
     return a;
   };
+  const SAVED = "companion.session";
+  const saved = {
+    get() { try { return JSON.parse(sessionStorage.getItem(SAVED) || "null"); } catch { return null; } },
+    set(v) { try { sessionStorage.setItem(SAVED, JSON.stringify(v)); } catch {} },
+  };
+  // So leaving for Runs or Docs and coming back keeps this conversation (same tab only).
+  const save = () => saved.set({ sid, thread, model, log: msgs.innerHTML });
 
   function add(kind, who, text) {
     const m = el("div", "msg " + kind);
     if (who) m.append(el("div", "who", who));
     m.append(el("div", "text", text));
-    msgs.append(m); scroll();
+    msgs.append(m); scroll(); save();
     return m;
   }
 
@@ -143,11 +167,11 @@
   function setBusy(b) {
     busy = b;
     input.disabled = send.disabled = newBtn.disabled = modelSel.disabled = b;
-    if (!b) input.focus();
+    if (!b) { input.focus(); save(); }
   }
 
   async function api(path, opts = {}) {
-    const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
+    const res = await fetch(BASE + path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const err = new Error(body.detail || res.statusText);
@@ -231,6 +255,7 @@
     add("you", "you", text);
     const pending = add("note", null, "thinking…");
     pending.querySelector(".text").classList.add("pending");
+    save();  // with the pending mark, so a page that leaves now can tell on return
     let reply = null;
     try {
       let res;
@@ -286,11 +311,46 @@
     why.type = "button"; why.onclick = showWhy;
     st.append(why); st._why = why; lastStatus = st;
     const t = reply._meta.thread_id;
-    if (ev.turn && dash("")) {
+    if (ev.turn && hasDash()) {
       st.append(dashLink(dash(`/runs/${t}?turn=${ev.turn}`), `turn ${ev.turn} in inspector`));
       st.append(dashLink(dash(`/runs/${t}/turn/${ev.turn}`), "lifecycle"));
     }
     whyBtn.disabled = false;
+  }
+
+  function setupNav() {
+    const base = EMBEDDED ? "" : info.dashboard_url;
+    if (base == null) return;  // on its own, with no inspector configured
+    for (const a of document.querySelectorAll("#nav a[data-to]")) a.href = base + a.dataset.to;
+    $("nav").querySelector("[aria-current]").href = EMBEDDED ? BASE : "/";
+    $("home").href = base + "/";
+    $("nav").hidden = false;
+  }
+
+  async function resume(prev) {
+    // The server keeps sessions in memory, so after a restart this starts over.
+    if (!prev || !prev.sid) return false;
+    let s;
+    try { s = await (await api(`/api/sessions/${prev.sid}`)).json(); } catch { return false; }
+    sid = prev.sid; thread = s.thread_id; model = s.model; modelSel.value = model;
+    msgs.innerHTML = prev.log || "";
+    // Left mid-turn: the server finished it anyway (one job per turn), so show what was missed.
+    msgs.querySelectorAll(".pending").forEach((n) => n.closest(".msg.note") ? n.closest(".msg").remove() : n.classList.remove("pending"));
+    const lastMsg = msgs.lastElementChild;
+    if (lastMsg && lastMsg.classList.contains("you")) {
+      const asked = lastMsg.querySelector(".text").textContent;
+      if (s.last && s.last.user_message === asked) {
+        const r = add("assistant", "companion", s.last.text);
+        const st = el("div", "status", "finished while you were away; see Runs for what it remembered");
+        r.append(st);
+      } else {
+        add("note", null, "You left before the reply arrived. It's still being written: reload in a moment.");
+      }
+    }
+    const why = [...msgs.querySelectorAll(".status button.link")].pop();
+    if (why) { why.onclick = showWhy; lastStatus = why.parentNode; lastStatus._why = why; whyBtn.disabled = false; }
+    setMeta(); scroll();
+    return true;
   }
 
   function closeWhy() { aside.classList.remove("open"); aside.replaceChildren(); }
@@ -318,11 +378,11 @@
         top.append(el("span", "chip" + (r.in_prompt ? " in" : ""), r.in_prompt ? "in prompt" : "also returned"));
         row.append(top, el("div", "content", r.content));
         const o = el("div", "origin");
-        if (r.origin_run && dash("")) o.append(dashLink(dash(`/runs/${r.origin_run}?turn=${r.origin_turn}`), r.origin));
+        if (r.origin_run && hasDash()) o.append(dashLink(dash(`/runs/${r.origin_run}?turn=${r.origin_turn}`), r.origin));
         else o.textContent = r.origin;
         row.append(o); aside.append(row);
       }
-      if (data.thread_id && dash("")) {
+      if (data.thread_id && hasDash()) {
         const more = el("div", "origin");
         more.append(dashLink(dash(`/runs/${data.thread_id}?view=why`), "full why, with health findings, in the inspector →"));
         aside.append(more);
@@ -357,8 +417,11 @@
     try {
       info = await (await api("/api/info")).json();
       model = await loadModels();
-      await startSession();
-      add("note", null, "Each tab is its own thread. Memories carry across threads, and across the terminal companion on the same schema.");
+      setupNav();
+      if (!(await resume(saved.get()))) {
+        await startSession();
+        add("note", null, "Each tab is its own thread. Memories carry across threads, and across the terminal companion on the same schema.");
+      }
       setBusy(false);
     } catch (e) {
       add("error", null, `Can't reach the companion: ${e.message}`);
