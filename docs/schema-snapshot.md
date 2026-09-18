@@ -1,0 +1,174 @@
+# Schema snapshot
+
+Generated 2026-09-18 06:44 UTC by `agent/scripts/dump_schema.py`.
+
+- oracleagentmemory: **26.6.0**
+- oracledb (python): 4.0.2
+- Database: Oracle AI Database Free 23.26.3.0.0
+- Schema: `AIM_APP`
+- Embedding model: `ollama/nomic-embed-text`
+
+Do not edit by hand. Rerun after any package version bump and diff.
+
+## Tables and row counts
+
+| table | rows |
+|---|---|
+| ACTOR_PROFILE | 0 |
+| MEMORY | 6 |
+| MESSAGE | 6 |
+| ORACLEAGENTMEMORY_SCHEMA_META | 4 |
+| RECORD_CHUNKS | 12 |
+| THREAD | 1 |
+
+Plus 3 vector index internal tables (`VECTOR$<index>$<object ids>$HNSW_*`), omitted below.
+
+## Package schema metadata
+
+| key | value |
+|---|---|
+| memory_retention_config | {"default_ttl_days":null,"max_ttl_days":null} |
+| record_chunks_indexing_mode | vector |
+| schema_version | 12 |
+| vector_dim | 768 |
+
+### ACTOR_PROFILE
+
+| column | type | length | precision | scale | nullable | default |
+|---|---|---|---|---|---|---|
+| ACTOR_ID | VARCHAR2 | 128 |  |  | N |  |
+| ACTOR_TYPE | VARCHAR2 | 30 |  |  | N |  |
+| SPACE_ID | VARCHAR2 | 128 |  |  | Y |  |
+| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73237".nextval |
+| INFORMATION | CLOB | 4000 |  |  | N |  |
+| METADATA | JSON | 8200 |  |  | Y |  |
+| CREATED_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | N | SYSTIMESTAMP  |
+
+### MEMORY
+
+| column | type | length | precision | scale | nullable | default |
+|---|---|---|---|---|---|---|
+| RECORD_ID | VARCHAR2 | 128 |  |  | N |  |
+| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73259".nextval |
+| THREAD_ID | VARCHAR2 | 128 |  |  | Y |  |
+| USER_ID | VARCHAR2 | 128 |  |  | Y |  |
+| AGENT_ID | VARCHAR2 | 128 |  |  | Y |  |
+| SPACE_ID | VARCHAR2 | 128 |  |  | Y |  |
+| MEMORY_TYPE | VARCHAR2 | 128 |  |  | N |  |
+| CONTENT | CLOB | 4000 |  |  | Y |  |
+| TIMESTAMP | VARCHAR2 | 64 |  |  | Y |  |
+| METADATA | JSON | 8200 |  |  | Y |  |
+| EXPIRES_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | Y |  |
+| CREATED_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | N | SYSTIMESTAMP  |
+
+### MESSAGE
+
+| column | type | length | precision | scale | nullable | default |
+|---|---|---|---|---|---|---|
+| RECORD_ID | VARCHAR2 | 128 |  |  | N |  |
+| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73252".nextval |
+| THREAD_ID | VARCHAR2 | 128 |  |  | Y |  |
+| USER_ID | VARCHAR2 | 128 |  |  | Y |  |
+| AGENT_ID | VARCHAR2 | 128 |  |  | Y |  |
+| SPACE_ID | VARCHAR2 | 128 |  |  | Y |  |
+| MESSAGE_ROLE | VARCHAR2 | 30 |  |  | N |  |
+| CONTENT | CLOB | 4000 |  |  | Y |  |
+| TIMESTAMP | VARCHAR2 | 64 |  |  | Y |  |
+| METADATA | JSON | 8200 |  |  | Y |  |
+| EXPIRES_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | Y |  |
+| CREATED_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | N | SYSTIMESTAMP  |
+
+### ORACLEAGENTMEMORY_SCHEMA_META
+
+| column | type | length | precision | scale | nullable | default |
+|---|---|---|---|---|---|---|
+| METADATA_KEY | VARCHAR2 | 64 |  |  | N |  |
+| METADATA_VALUE | VARCHAR2 | 4000 |  |  | N |  |
+| UPDATED_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | N | SYSTIMESTAMP  |
+
+### RECORD_CHUNKS
+
+| column | type | length | precision | scale | nullable | default |
+|---|---|---|---|---|---|---|
+| CHUNK_ID | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73266".nextval |
+| SOURCE_ID | VARCHAR2 | 128 |  |  | N |  |
+| SOURCE_RECORD_TYPE | VARCHAR2 | 30 |  |  | N |  |
+| SOURCE_EMB_COLUMN | VARCHAR2 | 30 |  |  | N |  |
+| CHUNK_SEQ | NUMBER | 22 |  |  | N | 1  |
+| CHUNK_TEXT | CLOB | 4000 |  |  | Y |  |
+| THREAD_ID | VARCHAR2 | 128 |  |  | Y |  |
+| USER_ID | VARCHAR2 | 128 |  |  | Y |  |
+| AGENT_ID | VARCHAR2 | 128 |  |  | Y |  |
+| SPACE_ID | VARCHAR2 | 128 |  |  | Y |  |
+| EMBEDDING | VECTOR | 8200 |  |  | Y |  |
+
+### THREAD
+
+| column | type | length | precision | scale | nullable | default |
+|---|---|---|---|---|---|---|
+| RECORD_ID | VARCHAR2 | 128 |  |  | N |  |
+| USER_ID | VARCHAR2 | 128 |  |  | Y |  |
+| AGENT_ID | VARCHAR2 | 128 |  |  | Y |  |
+| SPACE_ID | VARCHAR2 | 128 |  |  | Y |  |
+| METADATA | JSON | 8200 |  |  | Y |  |
+| RUNTIME_CONFIG | JSON | 8200 |  |  | Y |  |
+| RUNTIME_STATE | JSON | 8200 |  |  | Y |  |
+| CREATED_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | N | SYSTIMESTAMP  |
+
+## Constraints
+
+Type: P primary, U unique, R foreign key, C check (NOT NULL checks omitted).
+
+| table | constraint | type | columns | references | on delete | condition |
+|---|---|---|---|---|---|---|
+| ACTOR_PROFILE | SYS_C008721 | C | ACTOR_TYPE |  |  | actor_type IN ('user', 'agent') |
+| ACTOR_PROFILE | SYS_C008722 | P | ACTOR_ID |  |  |  |
+| MEMORY | SYS_C008736 | P | RECORD_ID |  |  |  |
+| MEMORY | MEMORY_THREAD_FK | R | THREAD_ID | THREAD | CASCADE |  |
+| MESSAGE | SYS_C008730 | P | RECORD_ID |  |  |  |
+| MESSAGE | MESSAGE_THREAD_FK | R | THREAD_ID | THREAD | CASCADE |  |
+| ORACLEAGENTMEMORY_SCHEMA_META | SYS_C008715 | P | METADATA_KEY |  |  |  |
+| RECORD_CHUNKS | SYS_C008743 | P | CHUNK_ID |  |  |  |
+| THREAD | SYS_C008725 | P | RECORD_ID |  |  |  |
+
+## Indexes
+
+| table | index | type | subtype | domain type | unique | columns |
+|---|---|---|---|---|---|---|
+| ACTOR_PROFILE | SYS_C008722 | NORMAL |  |  | UNIQUE | ACTOR_ID |
+| MEMORY | SYS_C008736 | NORMAL |  |  | UNIQUE | RECORD_ID |
+| MESSAGE | SYS_C008730 | NORMAL |  |  | UNIQUE | RECORD_ID |
+| ORACLEAGENTMEMORY_SCHEMA_META | SYS_C008715 | NORMAL |  |  | UNIQUE | METADATA_KEY |
+| RECORD_CHUNKS | RECORD_CHUNKS_EMBEDDING_VEC_I | VECTOR | INMEMORY_NEIGHBOR_GRAPH_HNSW |  | NONUNIQUE | EMBEDDING |
+| RECORD_CHUNKS | SYS_C008743 | NORMAL |  |  | UNIQUE | CHUNK_ID |
+| THREAD | SYS_C008725 | NORMAL |  |  | UNIQUE | RECORD_ID |
+
+## Views
+
+| view | text length |
+|---|---|
+
+## Sequences
+
+| sequence | increment | last |
+|---|---|---|
+| ISEQ$$_73237 | 1 | 1 |
+| ISEQ$$_73252 | 1 | 21 |
+| ISEQ$$_73259 | 1 | 21 |
+| ISEQ$$_73266 | 1 | 21 |
+
+## Triggers
+
+| trigger | table | event | status |
+|---|---|---|---|
+
+## Scheduler jobs
+
+| job | type | repeat | enabled | state |
+|---|---|---|---|---|
+| PURGE_EXPIRED_RECORDS_J | PLSQL_BLOCK | FREQ=DAILY;INTERVAL=1 | TRUE | SCHEDULED |
+
+## Other objects
+
+| type | name |
+|---|---|

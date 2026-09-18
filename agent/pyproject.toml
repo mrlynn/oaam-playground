@@ -1,0 +1,14 @@
+[project]
+name = "memory-inspector-agent"
+version = "0.1.0"
+description = "Instrumented client and scripts for the Oracle AI Agent Memory inspector"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "oracleagentmemory==26.6.0",
+    "oracledb>=3.4.2",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+]
+
+[tool.uv]
+package = false

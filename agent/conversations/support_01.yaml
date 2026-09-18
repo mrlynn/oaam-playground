@@ -1,0 +1,20 @@
+# Scripted support conversation for the M1 smoke test.
+# Holds a durable preference, a one-off detail, and a mid-conversation correction
+# so extraction has something to decide about (lab 2 reuses the same shape).
+user_id: u_alice
+agent_id: support_bot
+explicit_memory: "Alice's account is on the Team plan, billed annually."
+query: "How does Alice like to be contacted?"
+messages:
+  - role: user
+    content: "Hi, my export job to S3 keeps failing with an access denied error."
+  - role: assistant
+    content: "Sorry about that. Which bucket region is the export targeting?"
+  - role: user
+    content: "us-east-1. Also, please always reach me by email, never by phone. I'm in meetings all day."
+  - role: assistant
+    content: "Noted, email only. Can you share the IAM role ARN the export uses?"
+  - role: user
+    content: "It's arn:aws:iam::123456789012:role/export-writer. Actually wait, the bucket is in us-west-2, not us-east-1. Sorry."
+  - role: assistant
+    content: "Thanks, us-west-2. The role is missing s3:PutObject on that bucket. Add it and retry the export."
