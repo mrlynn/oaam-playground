@@ -214,7 +214,7 @@ The order is chosen so daily use starts as soon as possible and the dashboard is
   - A bogus id returns 404; `?turn=abc` and `?turn=99` clamp correctly.
   - No console errors.
   - 375 px dark mode has no horizontal scroll.
-- **Not done:**
-  - `npm run build`: another session's `next dev` owns this directory, and I didn't want to disturb it.
-  - README screenshots: the browser tool can't save files.
-  - The `ThreadView` fallback wasn't exercised in the browser, because every seeded thread now has a run log. It type-checks and is the unchanged M2 markup.
+- **Checked after the commit:**
+  - `npm run build` is clean, once the other session's dev server had stopped.
+  - The `ThreadView` fallback was checked on a thread made by `smoke.py`, which bypasses the inspector. It shows the M2 layout with no scrubber, ignores `?turn=` and `?view=`, and has no console errors.
+- **Not done:** README screenshots. The browser tool can't save files.
