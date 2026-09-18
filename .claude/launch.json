@@ -38,6 +38,13 @@
         "--web"
       ],
       "port": 8765
+    },
+    {
+      "name": "demo",
+      "runtimeExecutable": "./demo.sh",
+      "runtimeArgs": [],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

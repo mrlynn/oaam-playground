@@ -16,7 +16,8 @@ It's a personal work sample, built to learn the package. It's not an Oracle prod
 | `labs/` | **Three Jupyter labs** on one loop: look, find, fix, check again. |
 | `agent/` | Seed data, setup scripts, and the spikes the design depends on. |
 | `infra/` | Oracle AI Database 26ai Free in Docker, plus the demo views. |
-| `site/` | **A docs site** over `docs/`, with a replay of the seeded demo that runs in the browser. No database needed: `cd site && npm install && npm start`. |
+| `site/` | **A docs site** over `docs/`, with a replay of the seeded demo that runs in the browser. `./demo.sh` serves it at `/docs`; on its own it needs no database: `cd site && npm install && npm start`. |
+| `demo.sh` | **The whole demo at one URL:** the chat at `/chat`, the inspector at `/runs` and `/memories`, the docs at `/docs`, all on `http://localhost:3000` with one header. |
 | `docs/` | Everything else. Start at [docs/README.md](docs/README.md). |
 
 The health check finds stale memories that a correction never replaced, contradictions, duplicates, conversation state stored as if it were a durable fact, and the turns where those crowded real memories out of the prompt. It uses SQL vector distance to find candidates and an LLM judge to decide.
@@ -37,8 +38,12 @@ uv run python scripts/seed.py --reset   # replays 4 conversations, then a health
 uv run python scripts/apply_sql.py      # views, run log and grants for the dashboard
 
 cd ../web && cp .env.example .env.local # AIM_WEB_PASSWORD from infra/.env
-npm install && npm run dev              # http://localhost:3000
+npm install && (cd ../site && npm install) && (cd ../companion && uv sync)
+
+cd .. && ./demo.sh --schema aim_app     # http://localhost:3000: chat, inspector and docs
 ```
+
+`./demo.sh` starts the chat, the inspector and the docs site together and puts them behind one URL and one header. `--schema aim_app` shows the seeded data; with no option it uses `aim_live`, your own conversations. Ctrl-C stops all three.
 
 Then run `uv run python scripts/demo_links.py` from `agent/` to get links straight to the interesting turns. The [first-run tutorial](docs/tutorial/first-run.md) walks the same path with what you should see at each step.
 
@@ -47,7 +52,7 @@ To talk to the companion with your own data, which goes in a separate `aim_live`
 ```bash
 cd agent && uv run python scripts/apply_sql.py --user aim_live --create-store
 cd ../companion && uv sync && uv run companion
-uv run companion --web                  # the same chat in a browser: http://localhost:8765
+cd .. && ./demo.sh                      # the same chat in the browser, next to the inspector and docs
 ```
 
 ## Documentation
