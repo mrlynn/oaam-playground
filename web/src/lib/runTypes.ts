@@ -1,0 +1,62 @@
+// Shapes of the memory-inspector run log views (AIM_V_RUNS, AIM_V_TURNS).
+// JSON columns arrive as parsed values. Types only, so both server code and
+// the node --test suite can import this file.
+
+export type RunRow = {
+  run_id: string;
+  source: "instrumented" | "replay" | "live";
+  user_id: string | null;
+  agent_id: string | null;
+  llm_model: string | null;
+  embed_model: string | null;
+  package_version: string | null;
+  first_turn_at: Date | null;
+  last_turn_at: Date | null;
+  turn_count: number;
+};
+
+/** One search result, as recorded by the wrapper. in_prompt is null when the agent didn't say. */
+export type Retrieval = {
+  search: number;
+  rank: number;
+  record_id: string;
+  record_type: string | null;
+  distance: number | null;
+  thread_id: string | null;
+  in_prompt: boolean | null;
+};
+
+export type DiffRecord = { id: string; type: string; content: string | null; thread_id?: string | null };
+export type DiffUpdate = { id: string; type: string; before: string | null; after: string | null };
+export type MemoryDiff = { created: DiffRecord[]; updated: DiffUpdate[]; deleted: DiffRecord[] };
+
+export type TurnAttrs = {
+  closed_by?: string;
+  queries?: string[];
+  computed?: string[];
+  [key: string]: unknown;
+};
+
+export type TurnRow = {
+  turn: number;
+  started_at: Date;
+  duration_ms: number | null;
+  user_message: string | null;
+  retrieved: Retrieval[] | null;
+  message_ids: string[] | null;
+  memory_diff: MemoryDiff | null;
+  attrs: TurnAttrs | null;
+  prompt_tokens: number | null;
+  flat_history_tokens: number | null;
+  reply_source: "scripted" | "model" | null;
+};
+
+export type TurnPrompt = {
+  assembled_prompt: string | null;
+  reply: string | null;
+  token_method: string | null;
+  usage: Record<string, unknown> | null;
+};
+
+/** Where a memory was first seen created in the run log, in any run. */
+export type MemoryOrigin = { memory_id: string; run_id: string; turn: number };

@@ -4,7 +4,7 @@ A memory inspector for [Oracle AI Agent Memory](https://pypi.org/project/oraclea
 
 Personal work sample, built to learn the package. Apache-2.0.
 
-Status: **milestone 3, step 3**. The `memory-inspector` library records every turn of an agent that uses the package, and a small real agent, the [companion](../companion/README.md), uses it daily. The dashboard's scrubber and "why" panel are next ([plan](plans/m3-run-log.md)).
+Status: **milestone 3, steps 1–5**. The `memory-inspector` library records every turn of an agent that uses the package. A small real agent, the [companion](../companion/README.md), uses it. The dashboard steps through a conversation turn by turn and answers "why did it say that?" for every reply. What's left is daily use and screenshots ([plan](plans/m3-run-log.md)).
 
 ![Thread view: conversation on the left, the durable memories it produced on the right](img/thread-view.png)
 

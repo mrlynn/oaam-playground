@@ -192,3 +192,29 @@ The order is chosen so daily use starts as soon as possible and the dashboard is
   - The stale fact reproduces: "us-east-1" is created at turn 2 of `support_01`, survives the correction at turn 3, and is retrieved later.
   - The REPL, driven through stdin as u_alice on `aim_app`, gave a real miss that `/why` explained (friction 04:25).
 - **Not yet done from step 3/4:** nothing is in `aim_live` yet, because daily use is yours to start. The companion still has its working name.
+
+### Step 5 (dashboard: scrubber and "why" panel)
+- **Pages:** `/runs/[id]` shows `RunView` when the thread has a run log, and falls back to `ThreadView` (the M2 layout, moved to a component unchanged) when it doesn't. The header is shared (`RunHeader`), with a run chip showing turn count, source, models and package version.
+- **URL state:** `?turn=n&view=why&expired=1`. `parseTurn` clamps the turn number and treats anything invalid as the last turn. An invalid `view` means memory.
+- **The scrubber writes the URL; it doesn't hold state.** The client `TurnScrubber` uses `router.replace` without a scroll jump, and keeps `view` and `expired`, which the server passes down as a string, so no `useSearchParams` is needed. ←/→ keys are ignored while focus is in an input or on the slider itself, which handles its own keys.
+- **Memory at turn n** is computed by `memoryStateAt` from per-turn diffs, not the table: content as of turn n, revisions up to n, and removed rows that the table no longer has. Pre-existing memories are listed first, then in creation order.
+- **"Why" pane:**
+  - Every result of turn n's searches, grouped by search and showing the query text.
+  - For each result: rank, type, distance bar, the "in prompt" / "also returned" / "returned by search" label, content as of turn n, and where it came from, as a link to a turn in this run or another run, or "before the run log".
+  - Raw message chunks are flagged.
+  - The assembled prompt sits in a `<details>` with scoped vs flat tokens.
+  - Clicking "why?" on any assistant message opens its turn in this view.
+- **Phones:** the scrubber is sticky only on desktop, and in "why" mode the right pane moves above the conversation, so tapping "why?" shows something.
+- **Queries:** `getRun`, `getTurns` (without the prompt and reply texts), `getTurnPrompt` (only in "why"), `getMemoriesByIds` and `getMessagesByIds` for results from other threads, `getMemoryOrigins` (a `JSON_TABLE` over every turn's `created` list), and `listRuns`. All go through `AIM_V_*` views; nothing new was granted.
+- **Tests:** `web/tests/memoryState.test.mjs`, 10 cases under `node --test` with no framework (Node strips the TypeScript itself). The npm script uses a glob because this Node version won't take a bare directory.
+- **Verified in the browser** against the seeded `support_01` run:
+  - At turn 3 the "why" view shows the stale "us-east-1" fact ranked #1 and in the prompt, created at turn 2.
+  - ← steps back a turn, keeping the view and not scrolling.
+  - At turn 2 the new memories are marked and turn 3's messages are dimmed.
+  - A bogus id returns 404; `?turn=abc` and `?turn=99` clamp correctly.
+  - No console errors.
+  - 375 px dark mode has no horizontal scroll.
+- **Not done:**
+  - `npm run build`: another session's `next dev` owns this directory, and I didn't want to disturb it.
+  - README screenshots: the browser tool can't save files.
+  - The `ThreadView` fallback wasn't exercised in the browser, because every seeded thread now has a run log. It type-checks and is the unchanged M2 markup.
