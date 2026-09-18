@@ -90,6 +90,16 @@ class Inspector:
             self._current.set(turn)
         return turn
 
+    def start_thread(self) -> None:
+        """Called before create_thread. An open turn that only created a thread
+        nobody has used yet is dropped, so the new thread starts its own turn
+        instead of joining the old thread's (two /new in a row, or a model
+        switch before speaking). Nothing is lost: an unused thread has no run."""
+        turn = self.current_turn()
+        if (turn is not None and not turn.explicit and turn.thread_id is not None
+                and set(turn.spans.wrapper_names()) <= {"create_thread"}):
+            self._current.set(None)
+
     @contextmanager
     def turn(self, thread: Any = None) -> Iterator[Turn]:
         """Make the turn boundary explicit: everything inside is one turn,
@@ -107,6 +117,13 @@ class Inspector:
         finally:
             self._safe(lambda: self.close_turn(turn, "explicit"))
             self._current.reset(token)
+
+    def describe_run(self, run_id: str, *, llm_model: str | None = None, embed_model: str | None = None) -> None:
+        """Optional: the models one run (thread) uses, when they differ from
+        the ones given to inspect(). Call it before the thread's first turn."""
+        describe = getattr(self.writer, "describe_run", None)
+        if describe is not None:
+            self._safe(lambda: describe(run_id, llm_model=llm_model, embed_model=embed_model))
 
     def record_prompt(self, prompt: str | None = None, reply: str | None = None, *, usage: Any = None,
                       memory_ids_used: list[str] | None = None, prompt_tokens: int | None = None,

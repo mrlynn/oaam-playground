@@ -311,3 +311,40 @@ def test_app_logging_sees_only_what_it_saw_before(env):
     finally:
         root.removeHandler(h)
     assert seen == [logging.WARNING]
+
+
+def test_describe_run_overrides_models_for_that_run_only():
+    from memory_inspector.runlog import RunLogWriter
+
+    w = RunLogWriter(None, source="live", llm_model="anthropic/claude-sonnet-5", embed_model="ollama/nomic-embed-text")
+    w.describe_run("t2", llm_model="ollama_chat/qwen3.5:9b")
+    assert w.run_meta("t2")["llm_model"] == "ollama_chat/qwen3.5:9b"
+    assert w.run_meta("t2")["embed_model"] == "ollama/nomic-embed-text"
+    assert w.run_meta("t1")["llm_model"] == "anthropic/claude-sonnet-5"
+
+
+def test_describe_run_never_reaches_the_agent_as_an_error(env):
+    memory, *_ = env
+    memory.inspector.describe_run("t1", llm_model="x")  # the fake writer has no describe_run
+
+
+def test_a_thread_created_after_an_unused_one_gets_its_own_turn(env):
+    # /new twice, or a model switch, before anyone speaks
+    memory, writer, _, _ = env
+    memory.create_thread(user_id="u1", thread_id="t1")
+    thread = memory.create_thread(user_id="u1", thread_id="t2")
+    memory.search("anything", user_id="u1")
+    thread.add_messages([{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}])
+    (n, rec, events), = writer.turns
+    assert rec.run_id == "t2" and "other_threads" not in rec.attrs
+    assert [e.name for e in events].count("create_thread") == 1
+
+
+def test_a_turn_with_work_in_it_is_not_dropped_by_create_thread(env):
+    memory, writer, _, _ = env
+    first = memory.create_thread(user_id="u1", thread_id="t1")
+    memory.search("anything", user_id="u1")
+    memory.create_thread(user_id="u1", thread_id="t2")
+    first.add_messages([{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}])
+    (n, rec, events), = writer.turns
+    assert rec.run_id == "t1" and "search" in [e.name for e in events]

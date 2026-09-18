@@ -98,6 +98,16 @@ class RunLogWriter:
         self._pool = pool
         self._run_meta = {"source": source, "llm_model": llm_model, "embed_model": embed_model,
                           "package_version": package_version}
+        self._run_overrides: dict[str, dict[str, Any]] = {}
+
+    def describe_run(self, run_id: str, *, llm_model: str | None = None, embed_model: str | None = None) -> None:
+        """Per-run metadata for an agent that picks models per thread. It's
+        written with the run's first turn, so describe a run before that."""
+        given = {"llm_model": llm_model, "embed_model": embed_model}
+        self._run_overrides.setdefault(run_id, {}).update({k: v for k, v in given.items() if v is not None})
+
+    def run_meta(self, run_id: str) -> dict[str, Any]:
+        return {**self._run_meta, **self._run_overrides.get(run_id, {})}
 
     def flush_turn(self, turn: TurnRecord, events: list[Event]) -> int | None:
         """Returns the turn number written, or None if the write failed."""
@@ -106,7 +116,7 @@ class RunLogWriter:
             with self._pool.acquire() as conn:
                 cur = conn.cursor()
                 cur.execute(_MERGE_RUN, {"run_id": turn.run_id, "user_id": turn.user_id, "agent_id": turn.agent_id,
-                                         "started": _utc(turn.started), **self._run_meta})
+                                         "started": _utc(turn.started), **self.run_meta(turn.run_id)})
                 (count,) = cur.execute("SELECT turn_count FROM aim_runs WHERE run_id = :r FOR UPDATE",
                                        {"r": turn.run_id}).fetchone()
                 number = count + 1
