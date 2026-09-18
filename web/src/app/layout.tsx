@@ -19,7 +19,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Memory Inspector",
+  title: "Agent Memory Playground",
   description: "What an Oracle AI Agent Memory store remembers, and why.",
 };
 
@@ -32,21 +32,25 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Providers>
             <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
               <Toolbar sx={{ gap: 2, flexWrap: "wrap", py: { xs: 1, sm: 0 } }}>
-                <Link href="/runs">
+                <Link href="/">
                   <Typography variant="subtitle1" component="span" sx={{ fontWeight: 700 }}>
-                    Memory Inspector
+                    Agent Memory Playground
                   </Typography>
                 </Link>
-                <Typography variant="body2" color="text.secondary" component="span" sx={{ display: { xs: "none", md: "inline" } }}>
-                  Oracle AI Agent Memory
-                </Typography>
                 <Box component="nav" aria-label="Main" sx={{ display: "flex", gap: 2 }}>
+                  {/* Chat and Docs are proxied apps (next.config.ts), not routes here: plain links. */}
+                  <a href="/chat">
+                    <Typography variant="body2" component="span">Chat</Typography>
+                  </a>
                   <Link href="/runs">
                     <Typography variant="body2" component="span">Runs</Typography>
                   </Link>
                   <Link href="/memories">
                     <Typography variant="body2" component="span">Memory</Typography>
                   </Link>
+                  <a href="/docs">
+                    <Typography variant="body2" component="span">Docs</Typography>
+                  </a>
                 </Box>
                 <Box sx={{ flexGrow: 1 }} />
                 <Suspense fallback={null}>
