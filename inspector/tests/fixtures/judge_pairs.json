@@ -1,0 +1,185 @@
+{
+  "source": "aim_app seeds, 2026-09-18, pairs under 0.15 cosine; hand-labelled",
+  "pairs": [
+    {
+      "distance": 0,
+      "older": {
+        "type": "fact",
+        "content": "Alice's account is on the Team plan, billed annually."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "Alice's account is on the Team plan, billed annually."
+      },
+      "accept": [
+        "duplicate"
+      ],
+      "current": null,
+      "why": "the same explicit fact written twice"
+    },
+    {
+      "distance": 0.042,
+      "older": {
+        "type": "fact",
+        "content": "User's failing S3 export job targets a bucket in the us-east-1 region."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "User's failing S3 export job targets a bucket in the us-west-2 region (corrected from an earlier stated us-east-1)."
+      },
+      "accept": [
+        "supersedes"
+      ],
+      "current": "newer",
+      "why": "the correction replaces the earlier region"
+    },
+    {
+      "distance": 0.045,
+      "older": {
+        "type": "fact",
+        "content": "Priya Shah's and Tom Okafor's new read-only analyst access accounts are set to expire after 90 days per company standard, unless renewed."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "Read-only analyst accounts for Priya Shah and Tom Okafor have been created and expire in 90 days."
+      },
+      "accept": [
+        "duplicate"
+      ],
+      "current": null,
+      "why": "same accounts, same expiry"
+    },
+    {
+      "distance": 0.059,
+      "older": {
+        "type": "preference",
+        "content": "User prefers to always be contacted by email, never by phone, because they are in meetings all day."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "User is in meetings all day, which is why they prefer email over phone contact."
+      },
+      "accept": [
+        "duplicate"
+      ],
+      "current": null,
+      "why": "same preference, stated as fact and as preference"
+    },
+    {
+      "distance": 0.07,
+      "older": {
+        "type": "guideline",
+        "content": "To fix the failing S3 export job, add the s3:PutObject permission to the export-writer IAM role on the target bucket, then retry the export."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "The export-writer IAM role is missing the s3:PutObject permission on the target bucket, causing the S3 export job to fail with access denied."
+      },
+      "accept": [
+        "complementary"
+      ],
+      "current": null,
+      "why": "cause and remedy"
+    },
+    {
+      "distance": 0.091,
+      "older": {
+        "type": "preference",
+        "content": "User prefers to always be contacted by email, never by phone, because they are in meetings all day."
+      },
+      "newer": {
+        "type": "preference",
+        "content": "User prefers to be contacted only by email, never by phone."
+      },
+      "accept": [
+        "duplicate"
+      ],
+      "current": null,
+      "why": "same preference, one adds the reason"
+    },
+    {
+      "distance": 0.093,
+      "older": {
+        "type": "memory",
+        "content": "Assistant asked user which bucket region the failing S3 export job is targeting; awaiting response."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "User's failing S3 export job targets a bucket in the us-east-1 region."
+      },
+      "accept": [
+        "supersedes",
+        "complementary"
+      ],
+      "current": "newer",
+      "why": "a pending question and its answer"
+    },
+    {
+      "distance": 0.116,
+      "older": {
+        "type": "memory",
+        "content": "Assistant asked user which bucket region the failing S3 export job is targeting; awaiting response."
+      },
+      "newer": {
+        "type": "fact",
+        "content": "User's failing S3 export job targets a bucket in the us-west-2 region (corrected from an earlier stated us-east-1)."
+      },
+      "accept": [
+        "supersedes",
+        "complementary"
+      ],
+      "current": "newer",
+      "why": "a pending question and its (corrected) answer"
+    },
+    {
+      "distance": 0.129,
+      "older": {
+        "type": "memory",
+        "content": "Assistant asked user whether the two new analysts being onboarded should receive the same export-writer role the user has; user has not yet confirmed."
+      },
+      "newer": {
+        "type": "memory",
+        "content": "User is onboarding two new analysts and wants them granted export access."
+      },
+      "accept": [
+        "complementary",
+        "unrelated"
+      ],
+      "current": null,
+      "why": "a pending question and the task it is about"
+    },
+    {
+      "distance": 0.135,
+      "older": {
+        "type": "fact",
+        "content": "The nightly Postgres sync job's destination has been remapped from 'orders' to 'orders_v2', resolving the sync failure."
+      },
+      "newer": {
+        "type": "memory",
+        "content": "A backfill for the last two days of data was triggered for the nightly Postgres sync job after remapping its destination to orders_v2."
+      },
+      "accept": [
+        "complementary"
+      ],
+      "current": null,
+      "why": "a follow-up action and the fix it follows"
+    },
+    {
+      "distance": 0.144,
+      "older": {
+        "type": "preference",
+        "content": "User prefers to be notified by email only when tasks are completed, and does not want phone calls."
+      },
+      "newer": {
+        "type": "preference",
+        "content": "User prefers to be contacted only by email, never by phone."
+      },
+      "accept": [
+        "duplicate",
+        "complementary"
+      ],
+      "current": null,
+      "why": "general preference and a narrower one"
+    }
+  ]
+}

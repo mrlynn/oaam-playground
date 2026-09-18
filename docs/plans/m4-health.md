@@ -36,11 +36,21 @@ Done means:
 | On the seeds, 11 memory pairs are under 0.15 cosine distance. They include a contradiction (0.042), a paraphrase (0.045), a cross-type duplicate (0.059), a complementary fact/guideline pair (0.070) and transient-vs-fact (0.093) | **Distance finds candidates; it can't classify them.** A contradiction sits closer than a legitimate pair. Classification needs a judge (an LLM), and its verdicts must be labelled as judgments, not facts. |
 | One exact duplicate (distance 0) exists across threads: the explicit "Team plan" fact written by both `support_01` and `smoke.py` | Nothing dedups across threads, so `add_memory` twice gives two rows. That's a real finding, with seeds that reproduce it. |
 | Superseding memories often say so ("corrected from an earlier stated us-east-1") | A cheap deterministic signal. Correction language plus a close, older neighbour means "likely superseded" before any judge runs. |
-| We compute COSINE ourselves. **The metric behind `search`'s `distance` is still unverified.** | Step 0 checks it (compare one query's `search` distances with our own `VECTOR_DISTANCE`). Until then, never mix the two numbers on one scale. |
+| We compute COSINE ourselves, and spike 0.1 confirmed that `search`'s `distance` is the same COSINE | One scale for candidate pairs and search results; the UI can say "cosine". |
 | `aim_web` can't read `RECORD_CHUNKS` or `MEMORY` | Checks run on the Python side as the schema owner and write `AIM_FINDINGS`. The dashboard reads findings through views, as it does everything else. |
 | The run log already has everything "crowded turn" needs: per-turn `retrieved` with `in_prompt` | A crowded turn is one where two or more in-prompt results belong to the same duplicate or superseded pair. No new instrumentation is needed. |
 | The 04:25 crowding happened in a live REPL turn that the reset has since wiped | The seeds need a scripted turn that reproduces it. `companion/conversations/support_03.yaml` asks Alice's mixed question after `support_01` and `onboarding_01`. |
 | LLM verdicts vary from run to run | The labs' "fix and watch it disappear" loop needs stable verdicts. Judgments are cached by (model, prompt version, content hash), so reruns reuse them and only changed memories are judged again. |
+
+## Spike results (step 0, 2026-09-18)
+
+| spike | result | what changes |
+|---|---|---|
+| 0.1 search metric (`agent/spikes/search_metric.py`) | `search`'s `distance` is **exactly** `VECTOR_DISTANCE(..., COSINE)`. Embeddings are normalized FLOAT64; a FLOAT32 bind fails with ORA-51812. | The UI can say "cosine distance". Candidate pairs from SQL and search distances share one scale. Query vectors must be bound as FLOAT64. |
+| 0.2 custom instructions (`agent/spikes/custom_instructions.py`) | Transient memories: 4 → **0** in every trial. Stale corrections: kept in **3 of 3** trials; extraction only appends. Wording that says to drop the earlier value strips the "(corrected from…)" signal. | **Lab 2** teaches the transient fix with the tested string (in the spike script). **Lab 3** teaches supersession cleanup by hand (`delete_memory` on the id the finding names). The instruction must keep "(corrects X)". The append-only behaviour is the headline of the friction summary. |
+| 0.3 judge agreement (`agent/spikes/judge_agreement.py`, fixture `inspector/tests/fixtures/judge_pairs.json`) | Sonnet 5: **10/11**, contradiction and complementary pair both right. Haiku 4.5: 9/11, and it calls the complementary cause/fix pair a duplicate. Both read one pending-question pair as "supersedes", which is low harm because it flags a transient memory. About 5k tokens for 11 pairs. | **Judge defaults to `AIM_LLM_MODEL`**, not Haiku: Haiku's miss would tell users to delete a legitimate guideline. `max_tokens=1000`, no `temperature` (Sonnet 5 rejects 0), a reply without JSON becomes an `unparsed` verdict, and verdicts are cached for stability. |
+
+Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building now on seeds, validating on `aim_live` at the end.
 
 ## Decisions
 
