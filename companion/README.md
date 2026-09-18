@@ -1,6 +1,6 @@
 # companion
 
-A small terminal work companion. You talk through your projects, decisions and plans in short sessions, and it remembers across them using [Oracle AI Agent Memory](https://pypi.org/project/oracleagentmemory/). It's small on purpose. Its job is to produce honest memory behavior from real use, so the [memory inspector](../inspector/README.md) has something real to show.
+A small work companion, in the terminal or the browser. You talk through your projects, decisions and plans in short sessions, and it remembers across them using [Oracle AI Agent Memory](https://pypi.org/project/oracleagentmemory/). It's small on purpose. Its job is to produce honest memory behavior from real use, so the [memory inspector](../inspector/README.md) has something real to show.
 
 It's also the proof that the inspector drops into another project. Everything inspector-specific is in `config.py` (`inspect(...)`), `agent.py` (`record_prompt(...)`, `last_turn`) and `why.py` (a read of the run log).
 
@@ -20,6 +20,20 @@ Commands in the chat:
 | `/quit` | Exit (Ctrl-D works too) |
 
 After each reply it prints what it remembered, for example `remembered in 7.1s: 2 created, 1 updated`. Extraction runs inline, so that's a real pause.
+
+## In the browser
+
+```bash
+uv run companion --web           # http://localhost:8765, same schema and settings as the terminal
+```
+
+It's the same turn with a page on top. The reply shows as soon as the model returns it. The "remembered" line follows when extraction finishes, with links to that turn in the [dashboard](../docs/reference/dashboard.md): the conversation at that turn, and its lifecycle. **why** (or typing `/why`) opens the same explanation as the terminal, and each origin links to the turn that created the memory. **new thread** (or `/new`) starts a new thread. Each browser tab is its own thread, and a reload starts a fresh one, like restarting the terminal companion.
+
+The dashboard links only work if the dashboard reads the same schema. For your live data, that means `AIM_SCHEMA=AIM_LIVE` in `web/.env.local`. `COMPANION_DASHBOARD_URL` moves or hides the links.
+
+It listens on `127.0.0.1` only, and refuses requests from other origins. The page writes to your memory store and spends model credits, so to serve it beyond your machine you must set `COMPANION_WEB_TOKEN` and use `--host`. Open the printed `?token=` link once per browser.
+
+Turns run one at a time, even across tabs. The inspector tracks the open turn per thread of execution, so every call runs on one worker thread (`web.py` says why).
 
 ## Each turn
 

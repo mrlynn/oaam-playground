@@ -68,16 +68,19 @@ cd companion && uv sync
 uv run companion                                          # chat, schema aim_live
 uv run companion --script conversations/support_01.yaml   # replay into aim_app
 uv run companion --script conversations/support_01.yaml --live   # the model writes the replies
+uv run companion --web                                    # the same chat in a browser, http://localhost:8765
 ```
 
 | flag | meaning |
 |---|---|
 | `--script FILE` | replay a YAML conversation (`user_id`, `agent_id`, `messages`, optional `explicit_memory`) |
 | `--live` | with `--script`, the model writes the replies instead of the scripted lines |
+| `--web` | serve the chat as a web page instead of the terminal |
+| `--host`, `--port` | with `--web`. Default `127.0.0.1` and `8765`. Any address that isn't loopback needs `COMPANION_WEB_TOKEN`. |
 | `--db-user` | schema. Default `aim_live` for chat, `aim_app` for scripts. |
 | `--user-id` | memory user. Default `COMPANION_USER_ID` or `me` for chat, the YAML's for scripts. |
 
-Chat commands: `/why` (what the last reply was built from), `/new` (a new thread), `/quit` (or Ctrl-D).
+Chat commands: `/why` (what the last reply was built from), `/new` (a new thread), `/quit` (or Ctrl-D). The web page has the same `/why` and `/new`, as buttons and as commands.
 
 | variable | default |
 |---|---|
@@ -88,6 +91,8 @@ Chat commands: `/why` (what the last reply was built from), `/new` (a new thread
 | `COMPANION_EMBED_MODEL` | `AIM_EMBED_MODEL` |
 | `COMPANION_USER_ID` | `me` |
 | `COMPANION_AGENT_ID` | `companion` |
+| `COMPANION_DASHBOARD_URL` | `http://localhost:3000`. The web page links each turn to it. Set it empty to hide the links. |
+| `COMPANION_WEB_TOKEN` | unset. When set, the web page needs `?token=` once per browser and accepts any host. |
 
 Scripted conversations live in `companion/conversations/`:
 - `onboarding_01`: Alice onboards two analysts, with 90-day access, email only.
@@ -115,7 +120,7 @@ uv run jupyter nbconvert --to notebook --execute lab3_retrieval_quality.ipynb --
 
 ```bash
 cd inspector && uv run pytest -q      # 76: stages and spans (captured fixture), turns, diff, health checks, judge
-cd companion && uv run pytest -q      # 11: prompt assembly, token counting, /why
+cd companion && uv run pytest -q      # 19: prompt assembly, token counting, /why, the web server
 cd web && npm test                    # 25: memory state, "why" rows, findings, lifecycle
 cd web && npm run lint && npm run build
 cd site && npm test                   # 5: the committed export through the shared logic

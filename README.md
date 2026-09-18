@@ -12,7 +12,7 @@ It's a personal work sample, built to learn the package. It's not an Oracle prod
 |---|---|
 | `inspector/` | **`memory-inspector`**, the library. Wrap your client with `inspect()` and every turn is recorded: searches with their cosine distances, memory created, updated and deleted, and a timed trace of the package's own work. `memory-inspector check` runs a health check on the whole store. |
 | `web/` | **The dashboard** (Next.js, read-only). Step through a conversation turn by turn, ask "why did it say that?" of any reply, see each turn's lifecycle as a waterfall, and read health findings with evidence and a suggested fix. |
-| `companion/` | **The companion**, a small real agent that uses the library. `/why` in the terminal explains its last reply. |
+| `companion/` | **The companion**, a small real agent that uses the library, in the terminal or the browser (`--web`). `/why` explains its last reply. |
 | `labs/` | **Three Jupyter labs** on one loop: look, find, fix, check again. |
 | `agent/` | Seed data, setup scripts, and the spikes the design depends on. |
 | `infra/` | Oracle AI Database 26ai Free in Docker, plus the demo views. |
@@ -47,6 +47,7 @@ To talk to the companion with your own data, which goes in a separate `aim_live`
 ```bash
 cd agent && uv run python scripts/apply_sql.py --user aim_live --create-store
 cd ../companion && uv sync && uv run companion
+uv run companion --web                  # the same chat in a browser: http://localhost:8765
 ```
 
 ## Documentation
