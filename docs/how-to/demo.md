@@ -119,7 +119,7 @@ The 5-minute spine, plus four extensions. Pick the ones that fit the audience.
 
 ### C. One line to instrument, in a real agent (+3 min)
 
-**Show:** the companion. In the browser, that's **Chat** in the demo's header (started with `--user-id u_alice` in step 4). In a terminal, use the seed user, not your real data:
+**Show:** the companion. In the browser, that's **Chat** in the demo's header (started with `--user-id u_alice` in step 4), or the **Chat** button at the bottom right of any page: open it on Memory and the page refreshes as each turn's memories land. In a terminal, use the seed user, not your real data:
 
 ```bash
 cd companion

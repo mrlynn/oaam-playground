@@ -29,7 +29,7 @@ from typing import Any, AsyncIterator, Callable
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .agent import Companion, Remembered, Reply
@@ -138,6 +138,12 @@ def create_app(info: Info, make_companion: Callable[[str], Companion],
         if token is not None and not hmac.compare_digest(request.cookies.get(COOKIE, ""), token):
             raise HTTPException(401, "open the link with ?token=")
         return HTMLResponse(files("companion").joinpath("static/index.html").read_text())
+
+    @app.get("/widget.js")
+    async def widget():
+        # The chat as a floating panel on the inspector's and docs' pages (./demo.sh).
+        return Response(files("companion").joinpath("static/widget.js").read_text(),
+                        media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
     @app.get("/api/info")
     async def get_info():

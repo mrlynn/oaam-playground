@@ -37,6 +37,8 @@ const config: Config = {
   url: DEMO ? 'http://localhost:3000' : 'https://mrlynn.github.io',
   baseUrl: DEMO ? '/docs/' : '/oaam-playground/',
   customFields: {docsRoute: DOCS_ROUTE, demo: DEMO},
+  // In the demo, the chat as a floating panel on every page, served by the companion behind /chat.
+  scripts: DEMO ? [{src: '/chat/widget.js', defer: true}] : [],
   organizationName: 'mrlynn',
   projectName: 'oaam-playground',
   trailingSlash: false,

@@ -4,6 +4,8 @@ The dashboard in `web/` is a Next.js 16 app (App Router, MUI 9) that reads Oracl
 
 It's also the front door of `./demo.sh`: `next.config.ts` proxies `/chat` to the companion's web server and `/docs` to the docs site, so all three share one URL and one header (Chat · Runs · Memory · Docs). The proxying doesn't change the rule above. The chat writes through its own server, never through the dashboard, and without `./demo.sh` those two paths just fail to connect.
 
+Every inspector and docs page also carries the chat as a floating panel (bottom right). It's `widget.js`, served by the companion at `/chat/widget.js` and loaded by the layout here and by the docs' demo build. It's the chat page's conversation, not a second one: the same session, so the panel and `/chat` show one thread, and it follows you from page to page. When a turn's memories are written it fires `companion:remembered` on `window`, and the inspector re-renders the page under it, so a memory shows up on Memory or Runs while you chat. The panel appears only when the companion answers; without `./demo.sh` there's no button.
+
 Every page is server-rendered on request. There are no API routes, and the only client-side code is the turn scrubber and some small controls. All state lives in the URL, so any view is a link you can share.
 
 ## Running it

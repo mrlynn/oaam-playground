@@ -8,8 +8,10 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import Script from "next/script";
 import { Suspense } from "react";
 
+import CompanionRefresh from "@/components/CompanionRefresh";
 import Providers from "@/components/Providers";
 import StoreInfoChips from "@/components/StoreInfoChips";
 
@@ -63,6 +65,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Container>
           </Providers>
         </AppRouterCacheProvider>
+        {/* The chat as a floating panel, from the companion behind /chat (next.config.ts). It shows
+            only when the companion answers, and refreshes this page when a turn is remembered. */}
+        <Script src="/chat/widget.js" strategy="afterInteractive" />
+        <CompanionRefresh />
       </body>
     </html>
   );

@@ -183,3 +183,13 @@ def test_the_inspector_proxy_is_a_trusted_origin():
         assert client.post("/api/sessions", headers={"Origin": "http://localhost:3000"}).status_code == 403
         forged = {"Origin": "http://evil.example", "X-Forwarded-Host": "localhost:3000"}
         assert client.post("/api/sessions", headers=forged).status_code == 403
+
+
+def test_the_floating_chat_script_is_served():
+    # The inspector and the docs load it from /chat/widget.js (./demo.sh).
+    client, *_ = make_app()
+    with client:
+        resp = client.get("/widget.js")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/javascript")
+        assert "companion:remembered" in resp.text
