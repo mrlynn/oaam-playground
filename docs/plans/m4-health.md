@@ -266,3 +266,21 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
   - The contact-preference regex was tightened so it doesn't match the narrower task-notification preference.
 - **Library change prompted by lab 3:** one stale memory superseded by two later memories produced two `superseded` findings. It's now **one finding per stale memory**, with `evidence.superseded_by` listing every replacement. The dashboard marks each of them "current". 76 library tests pass.
 - **Not done:** sharing a draft with Anant is yours to do. The notebooks have not been reviewed on a machine other than this one.
+
+### Step 6 (docs and the friction summary)
+- **`docs/friction.md` ends with "Summary: five fixes".** Each fix is an observation, evidence, a suggested fix and a reproduction script, ordered by what it costs an agent's answers:
+  1. Corrections are appended, never applied.
+  2. "User-scoped" memories die with their thread.
+  3. Per-turn extraction keeps conversation state, and the fix is one prompt away, so make it the default.
+  4. Make memory inspectable from the outside: seven small API additions.
+  5. Smooth the first hour.
+
+  It opens with what works well (26 minutes to first memory; everything is ordinary rows). It's written for Matt and the product managers, as the spec asks, and goes to them privately before any public demo.
+- **The root README** describes M4: what's here, the `check` and labs commands, the four dashboard pages, and a link to the five fixes. The layout table is updated.
+- **Fresh-clone fix found while documenting.** `seed.py` now calls the library's idempotent `install()` before replaying. The replay writes a run log and ends with a check, and on a brand-new database those tables used to exist only after `apply_sql.py`, which the README runs afterwards.
+- **End-of-M4 checks:** `npm run build` is clean with all four routes (`/memories` and `/runs/[id]/turn/[n]` are new). Lint is clean. Web tests 23, library tests 76, companion tests 11.
+
+## Still open
+- **Verification 8, real data.** Run `agent/scripts/check.py --user aim_live` after a few days of companion use, and record per-kind counts, false positives and any threshold change here. It waits on daily use.
+- **README screenshots** of `/memories`, "why" with badges, and the lifecycle waterfall, from `aim_app` seeds only.
+- **Share labs 1–3 with Anant as a draft,** and the five fixes with Richmond and Matt.

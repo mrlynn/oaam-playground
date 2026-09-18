@@ -1,7 +1,7 @@
 # Friction log
 
 Timestamped as it happens. Each entry: what I tried, what I expected, what happened.
-Summary with suggested fixes goes at the bottom once there is enough to say.
+The [summary](#summary-five-fixes) at the bottom turns them into five suggested fixes with reproductions.
 
 ## Time to first memory
 
@@ -86,3 +86,96 @@ Clock started 2026-09-18 02:24 EDT (spec in hand, empty machine apart from Docke
 **2026-09-18 · The synchronous API warns about deadlocks in Jupyter.** In a notebook, every `add_messages` and `search` prints `UserWarning: You are calling an asynchronous method in a synchronous method from an asynchronous context. This is highly discouraged because it can lead to deadlocks.` Jupyter already runs an event loop, and the package's sync methods detect it. The calls work, but notebooks are where most people first meet this package (including the DeepLearning.AI course), and a deadlock warning on the first cell teaches them to ignore warnings. The labs filter this one message. Suggested fix: detect a running loop and run the coroutine on a worker thread without warning, or document the `*_async` methods for notebooks.
 
 **2026-09-18 · Mixed questions: cleanup helps, splitting helps more.** Lab 3, run cold twice. "Which region is my export bucket in, and how should you contact me?" never had the email-only preference in its top 10. After deleting everything the health check named (8–10 memories), it rose to rank 8–10. Asked on its own, "How should you contact me?" put it at rank 1. A two-topic question gets one embedding that lands between the topics. That isn't a package bug, but a memory quickstart that shows one search per user turn will lead people into it. Worth a line in the docs: split multi-part questions before searching.
+
+
+## Summary: five fixes
+
+`oracleagentmemory` 26.6.0 on Oracle AI Database Free 26ai, 2026-09-18. These are observations from one day of building on the package with a scripted agent, a small real one (`companion/`), three labs and an inspector. Each fix below has a script that reproduces the behaviour on a fresh `aim_app` seed.
+
+What works well is worth saying first:
+- **Time to first memory was 26 minutes from an empty machine:** 9 minutes of discovery, 3 of setup, 7 of implementation and 7 of integration.
+- **The embedder is truly pluggable.** Ollama worked on the first try.
+- **Errors mostly say what to do.** The schema-policy error names its own fix.
+- **Search is exactly cosine,** which makes SQL over the store straightforward.
+- **Everything is ordinary rows.** Keeping memory in Oracle made it inspectable: a read-only dashboard login, `VECTOR_DISTANCE` health checks, a cascade you can verify. That's a strong argument for memory in the database.
+
+The five below are ordered by how much they cost an agent's answers.
+
+### 1. Corrections are appended, never applied
+
+**Observed.** When a user corrects themselves mid-conversation ("actually, the bucket is in us-west-2"), per-turn extraction writes the corrected fact as a **new** memory. The one it corrects is never updated or expired. Extraction appears to only ever add rows.
+- It happened in every per-turn run: the seeds, the probe, labs 2 and 3, and 3 of 3 trials with custom instructions.
+- The two facts sit about 0.04 apart (cosine), so a search for one returns both. In the seeded "why" view, the stale fact is ranked #1 and goes into the prompt.
+- **Batch mode hides it.** One `add_messages` call over the whole conversation writes only the corrected fact.
+- Extraction's own past-memory lookup finds the earlier memory before writing. The information needed to revise it is already there.
+
+**Suggested fix.** When extraction produces a correction of a memory its lookup returned, update that memory (or expire it and link the new one to it) instead of appending. At minimum, record `supersedes: <id>` in the new memory's metadata so agents and tools can clean up reliably.
+
+**Reproduce.**
+- `agent/spikes/custom_instructions.py`: the stale fact survives with and without instructions.
+- `agent/scripts/probe_inspector.py`: turn 2 retrieves the stale fact, then creates 2 memories and updates 0.
+- `memory-inspector check`: reports it as `superseded`.
+
+### 2. "User-scoped" memories die with their thread
+
+**Observed.** Every extracted memory is written with `THREAD_ID` set, including the ones the extractor itself labels `"scope": "user"` or `"environment"` in its metadata. `MEMORY.THREAD_ID` cascades on delete, so cleaning up an old support thread deletes the user's durable preferences.
+- Lab 2 deletes one thread and goes from 9 memories to 0, taking "email only, never by phone" with it.
+- On the seeds, 32 of 37 memories are labelled broader than their thread.
+- The scope labels are also unstable between runs (`user` on one run, `environment` on the next for the same fact) and open-ended (`multi_agent` has appeared too).
+
+**Suggested fix.** Honour the extractor's scope when writing: store user-scoped memories with a NULL `THREAD_ID`. Or document clearly that extracted memories live and die with their thread, and give `delete_thread` a `keep_user_memories=True` option.
+
+**Reproduce.**
+- Lab 2, part 5.
+- `select thread_id, json_value(metadata, '$."$agent_memory".scope') from memory`.
+- `memory-inspector check`: reports it as `scope_mismatch`.
+
+### 3. Per-turn extraction keeps conversation state, and the fix is one prompt away
+
+**Observed.** Written one exchange at a time, the way agents write, extraction stores the conversation's state as durable memory: "Assistant asked the user which region…; awaiting reply".
+- That's about 4 in 20 memories per support conversation.
+- These are then retrieved in later sessions. On the seeds, **3 of the 4 most-retrieved memories were stale or transient.** The memories that reach the model most often are frequently the ones that shouldn't exist.
+- In the reproduced miss (seed `support_03`), transient and duplicate memories took 3 of 5 prompt slots, and the user's contact preference wasn't in the top 10.
+
+**Suggested fix.** Make "store only what matters in a later conversation" the **default** extraction behaviour. The package already has the lever: `memory_extraction_custom_instructions`, with the tested wording in `memory_inspector/health/checks.py` (`EXTRACTION_INSTRUCTIONS`), took transient memories from 4 to 0 in every trial and total memories down by about a third. One warning: the wording must keep corrections saying what they correct. Telling extraction to drop the earlier value removed the only signal of which fact is current.
+
+**Reproduce.**
+- `agent/spikes/custom_instructions.py`
+- Lab 2, parts 1–3
+- Seed `support_03` plus the crowded-turn finding on `/memories`
+
+### 4. Make memory inspectable from the outside
+
+**Observed.** Building the inspector needed seven workarounds, and each points at a small API addition that would help any team debugging an agent.
+
+| gap | workaround the inspector uses | suggested addition |
+|---|---|---|
+| No way to list memories | read the `MEMORY` table before and after each turn | `list_memories(user_id=, thread_id=)` |
+| Table names only via `client._store._memory_table` | read a private attribute | public accessors for the resolved table names |
+| No `UPDATED_AT`, and `update_memory` overwrites | before/after diffs in our own run log | `UPDATED_AT`, ideally a revision history |
+| Log records carry flags and counts, but no ids and no durations | pair start/end records; a wrapper records ids and distances | `thread_id`, `record_ids` and `elapsed_ms` in the log `extra` |
+| `Extractor context-summary update started.` has no completion record | infer its end from its LLM call | log the completion |
+| `Llm.generate` returns text only, and LiteLLM callbacks are disabled on import | none: extraction token spend is invisible | return usage on `LlmResponse` |
+| Messages are written after extraction returns | — (arrival order inside a turn is lost) | persist messages first, or document the ordering |
+
+**Reproduce.** `agent/scripts/probe_inspector.py` exercises every workaround. The entries at 02:46, 03:00, 03:20, 03:40, 03:45 and 03:50 above give detail.
+
+### 5. Smooth the first hour
+
+**Observed.** Four small things cost more time than they should:
+- **The get-started snippet fails on a fresh schema.** The default `schema_policy` is `REQUIRE_EXISTING`.
+- **With a missing API key, the constructor retries the embedding call three times,** logging only "retryable error".
+- **`SchemaPolicy.RECREATE` prints `DatabaseError… details suppressed`** on every run.
+- **In Jupyter, every call warns that it "can lead to deadlocks".** That's the environment of the DeepLearning.AI course and of these labs.
+
+Two more are documentation, not bugs:
+- **Search without `record_types` ranks raw messages alongside memories.** The quickstart never passes it.
+- **A two-topic question gets one embedding.** Splitting it put the answer at rank 1, where cleanup only reached rank 8 (lab 3, parts 5–6).
+
+**Suggested fix.**
+- Show `schema_policy="create_if_necessary"` and `record_types` in the quickstart.
+- Treat auth errors as non-retryable, with the provider's message.
+- Log the failing DDL statement and ORA code in `RECREATE`.
+- In a running event loop, run the coroutine on a worker thread without warning, or point notebooks at the `*_async` methods.
+
+**Reproduce.** `agent/scripts/smoke.py` on an empty schema without `schema_policy`; any lab notebook without `labkit`'s warning filter; lab 3.

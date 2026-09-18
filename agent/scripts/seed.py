@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from oracleagentmemory.core.dbschemapolicy import SchemaPolicy  # noqa: E402
 
+from memory_inspector import install  # noqa: E402
 from memory_inspector.health import run_check  # noqa: E402
 
 from aim_demo.config import REPO_DIR, SEED_USER, load_settings  # noqa: E402
@@ -62,6 +63,14 @@ def main() -> None:
     if args.reset and settings.db_user != SEED_USER:
         # aim_live holds real conversations. A RECREATE there is unrecoverable.
         sys.exit(f"refusing --reset on {settings.db_user}: only {SEED_USER} may be reset")
+
+    # The replay writes a run log and ends with a health check, so their tables
+    # must exist even on a brand-new database (idempotent; independent of the
+    # package schema). apply_sql.py still has to run afterwards for the views.
+    pool = create_pool(settings)
+    with pool.acquire() as conn:
+        install(conn, grant_to="aim_web")
+    pool.close()
 
     if args.reset:
         pool = create_pool(settings)
