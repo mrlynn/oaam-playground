@@ -28,7 +28,9 @@
   button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
            border-radius: 6px; padding: 5px 10px; cursor: pointer; }
   button:hover:not(:disabled) { border-color: var(--accent); }
-  button:disabled { opacity: .5; cursor: default; }
+  button:disabled, select:disabled { opacity: .5; cursor: default; }
+  select { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+           border-radius: 6px; padding: 4px 6px; max-width: 260px; min-width: 0; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   main { flex: 1; display: flex; min-height: 0; }
   #chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -78,6 +80,7 @@
 <header>
   <h1>companion</h1>
   <div id="meta">connecting…</div>
+  <select id="model" disabled aria-label="Model" title="Writes the replies and extracts the memories. Changing it starts a new thread."></select>
   <button id="whyBtn" type="button" disabled title="What the last reply was built from">why</button>
   <button id="newBtn" type="button" disabled title="Start a new thread. Memories carry across threads.">new thread</button>
 </header>
@@ -98,8 +101,15 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const msgs = $("msgs"), log = $("log"), input = $("input"), send = $("send");
-  const whyBtn = $("whyBtn"), newBtn = $("newBtn"), aside = $("why");
-  let info = null, sid = null, thread = null, busy = false, lastStatus = null;
+  const whyBtn = $("whyBtn"), newBtn = $("newBtn"), aside = $("why"), modelSel = $("model");
+  let info = null, sid = null, thread = null, busy = false, lastStatus = null, model = null, models = [];
+  const MODEL_KEY = "companion.model";
+  const store = {
+    get() { try { return localStorage.getItem(MODEL_KEY); } catch { return null; } },
+    set(v) { try { localStorage.setItem(MODEL_KEY, v); } catch {} },
+  };
+  const modelName = (id) => (models.find((m) => m.id === id) || { label: id }).label.replace(" (default)", "");
+  const isLocal = (id) => (models.find((m) => m.id === id) || {}).local;
 
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -126,13 +136,13 @@
   }
 
   function setMeta() {
-    $("meta").textContent = `${info.db_user} · user ${info.user_id} · ${info.model} · thread ${short(thread)}`;
+    $("meta").textContent = `${info.db_user} · user ${info.user_id} · thread ${short(thread)}`;
     $("meta").title = thread || "";
   }
 
   function setBusy(b) {
     busy = b;
-    input.disabled = send.disabled = newBtn.disabled = b;
+    input.disabled = send.disabled = newBtn.disabled = modelSel.disabled = b;
     if (!b) input.focus();
   }
 
@@ -147,11 +157,56 @@
     return res;
   }
 
+  async function loadModels() {
+    const body = await (await api("/api/models")).json();
+    models = body.models;
+    modelSel.replaceChildren();
+    const groups = [["Default", models.filter((m) => m.id === body.default)],
+                    ["Local (Ollama)", models.filter((m) => m.id !== body.default)]];
+    for (const [label, list] of groups) {
+      if (!list.length) continue;
+      const g = el("optgroup"); g.label = label;
+      for (const m of list) { const o = el("option", null, m.label); o.value = m.id; g.append(o); }
+      modelSel.append(g);
+    }
+    if (body.error) {
+      const o = el("option", null, "Ollama not reachable"); o.disabled = true;
+      modelSel.append(o); modelSel.title = body.error;
+    }
+    const saved = store.get();
+    return models.some((m) => m.id === saved) ? saved : body.default;
+  }
+
+  function modelNote(id) {
+    return `model ${modelName(id)}` + (isLocal(id) ? " (local: replies and memory extraction run on Ollama, and the first reply waits for the model to load)" : "");
+  }
+
   async function startSession(reason) {
-    const s = await (await api("/api/sessions", { method: "POST" })).json();
-    sid = s.session_id; thread = s.thread_id;
+    let s;
+    try {
+      s = await (await api("/api/sessions", { method: "POST", body: JSON.stringify({ model }) })).json();
+    } catch (e) {
+      if (e.status !== 400) throw e;  // the saved model is gone: use the default
+      s = await (await api("/api/sessions", { method: "POST", body: JSON.stringify({ model: null }) })).json();
+    }
+    sid = s.session_id; thread = s.thread_id; model = s.model; modelSel.value = model;
     setMeta();
-    add("note", null, (reason ? reason + " " : "") + `new thread ${short(thread)}`);
+    add("note", null, (reason ? reason + " " : "") + `new thread ${short(thread)} · ${modelNote(model)}`);
+  }
+
+  async function switchModel(next) {
+    if (busy || next === model) return;
+    setBusy(true);
+    try {
+      const s = await (await api(`/api/sessions/${sid}/model`, { method: "POST", body: JSON.stringify({ model: next }) })).json();
+      model = s.model; thread = s.thread_id; store.set(model); setMeta();
+      add("note", null, `new thread ${short(thread)} · ${modelNote(model)}`);
+      whyBtn.disabled = true; closeWhy();
+    } catch (e) {
+      modelSel.value = model;
+      await recover(e);
+    }
+    setBusy(false);
   }
 
   async function newThread() {
@@ -199,7 +254,7 @@
           const ev = JSON.parse(line);
           if (ev.type === "reply") {
             pending.remove();
-            reply = add("assistant", "companion", ev.text);
+            reply = add("assistant", ev.model === info.model ? "companion" : `companion · ${modelName(ev.model)}`, ev.text);
             const st = el("div", "status");
             const s = el("span", "pending", `${ev.in_prompt} of ${ev.retrieved} memories in prompt · remembering…`);
             st.append(s); reply.append(st); scroll();
@@ -295,11 +350,13 @@
   input.addEventListener("input", grow);
   whyBtn.onclick = () => aside.classList.contains("open") ? closeWhy() : showWhy();
   newBtn.onclick = newThread;
+  modelSel.onchange = () => switchModel(modelSel.value);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeWhy(); });
 
   (async () => {
     try {
       info = await (await api("/api/info")).json();
+      model = await loadModels();
       await startSession();
       add("note", null, "Each tab is its own thread. Memories carry across threads, and across the terminal companion on the same schema.");
       setBusy(false);

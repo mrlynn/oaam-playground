@@ -59,7 +59,8 @@ class Remembered:
 class Companion:
     def __init__(self, memory: Any, *, user_id: str, agent_id: str, model: str,
                  chat: Chat = litellm_chat, count: Counter = litellm_count,
-                 extraction_instructions: str | None = None) -> None:
+                 extraction_instructions: str | None = None,
+                 make_llm: Callable[[str], Any] | None = None) -> None:
         self.memory = memory
         self.user_id = user_id
         self.agent_id = agent_id
@@ -67,14 +68,19 @@ class Companion:
         self._chat = chat
         self._count = count
         self.extraction_instructions = extraction_instructions
+        self._make_llm = make_llm  # given: each thread extracts with self.model, not the client's default
         self.thread: Any = None
         self.history: list[dict[str, str]] = []
         self.last: Reply | None = None
 
     def new_thread(self) -> str:
-        kwargs = ({"memory_extraction_custom_instructions": self.extraction_instructions}
-                  if self.extraction_instructions else {})
+        kwargs: dict[str, Any] = ({"memory_extraction_custom_instructions": self.extraction_instructions}
+                                  if self.extraction_instructions else {})
+        if self._make_llm is not None:
+            kwargs["llm"] = self._make_llm(self.model)
         self.thread = self.memory.create_thread(user_id=self.user_id, agent_id=self.agent_id, **kwargs)
+        if self._make_llm is not None:
+            self.memory.inspector.describe_run(self.thread.thread_id, llm_model=self.model)
         self.history = []
         return self.thread.thread_id
 

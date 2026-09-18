@@ -89,7 +89,8 @@ Chat commands: `/why` (what the last reply was built from), `/new` (a new thread
 | `COMPANION_DB_USER` | `aim_live` |
 | `COMPANION_DB_PASSWORD` | `<DB_USER>_PASSWORD`, e.g. `AIM_LIVE_PASSWORD` |
 | `COMPANION_DB_DSN` | `AIM_DB_DSN`, then `localhost:1521/FREEPDB1` |
-| `COMPANION_LLM_MODEL` | `AIM_LLM_MODEL` |
+| `COMPANION_LLM_MODEL` | `AIM_LLM_MODEL`. Any LiteLLM id: `ollama_chat/qwen3.5:9b` runs the terminal companion on a local model. |
+| `OLLAMA_API_BASE` | `http://localhost:11434`. Where the web page looks for local models, and where LiteLLM sends `ollama_chat/` calls. |
 | `COMPANION_EMBED_MODEL` | `AIM_EMBED_MODEL` |
 | `COMPANION_USER_ID` | `me` |
 | `COMPANION_AGENT_ID` | `companion` |
@@ -121,8 +122,8 @@ uv run jupyter nbconvert --to notebook --execute lab3_retrieval_quality.ipynb --
 ## Tests
 
 ```bash
-cd inspector && uv run pytest -q      # 76: stages and spans (captured fixture), turns, diff, health checks, judge
-cd companion && uv run pytest -q      # 20: prompt assembly, token counting, extraction instructions, /why, the web server
+cd inspector && uv run pytest -q      # 80: stages and spans (captured fixture), turns, diff, health checks, judge
+cd companion && uv run pytest -q      # 26: prompt assembly, token counting, extraction instructions, /why, the web server, model choice
 cd web && npm test                    # 25: memory state, "why" rows, findings, lifecycle
 cd web && npm run lint && npm run build
 cd site && npm test                   # 5: the committed export through the shared logic
