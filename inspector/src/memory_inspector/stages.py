@@ -67,10 +67,15 @@ RULES: tuple[Rule, ...] = (
     Rule("core.oracledbmemorystore", "DB store add", "ingestion"),
     Rule("core._chunkers", "", "ingestion"),
     Rule("core._db.recordchunks", "Record-chunk insert", "ingestion"),
+    # Explicit add_memory: "Thread memory creation started." / "Thread memory created."
+    # (seen on thread.add_memory; the client-level name is assumed by analogy).
+    Rule("core.thread", "Thread memory creation", "ingestion"),
+    Rule("core.oracleagentmemory", "OracleAgentMemory memory creation", "ingestion"),
     # Deletes.
     Rule("core._db.recordchunks", "Record-chunk", "revision"),
     Rule("core.oracledbmemorystore", "DB store delete", "revision"),
     Rule("core.oracleagentmemory", "OracleAgentMemory thread deletion", "revision"),
+    # The next two names are assumed by analogy; nothing has exercised them yet.
     Rule("core.oracleagentmemory", "OracleAgentMemory memory deletion", "revision"),
     Rule("core.oracleagentmemory", "OracleAgentMemory memory update", "revision"),
     # Generic operations: their stage is whatever they are doing it for. A

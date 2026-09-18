@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from aim_demo.db import build_memory, create_pool, enable_package_logging  # noqa: E402
 
-CONVERSATION = Path(__file__).resolve().parent.parent / "conversations" / "support_01.yaml"
+CONVERSATION = Path(__file__).resolve().parents[2] / "companion" / "conversations" / "support_01.yaml"
 timings: dict[str, float] = {}
 
 

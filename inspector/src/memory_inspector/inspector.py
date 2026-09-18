@@ -109,17 +109,21 @@ class Inspector:
             self._current.reset(token)
 
     def record_prompt(self, prompt: str | None = None, reply: str | None = None, *, usage: Any = None,
-                      memory_ids_used: list[str] | None = None, flat_history_tokens: int | None = None,
-                      token_method: str | None = None, reply_source: str | None = None) -> None:
+                      memory_ids_used: list[str] | None = None, prompt_tokens: int | None = None,
+                      flat_history_tokens: int | None = None, token_method: str | None = None,
+                      reply_source: str | None = None) -> None:
         """Optional: tell the inspector what the agent sent and got back this turn.
-        memory_ids_used marks which search results made it into the prompt."""
+        memory_ids_used marks which search results made it into the prompt.
+        prompt_tokens defaults to the input tokens in `usage`; pass it when
+        there was no model call (a scripted reply) and you counted instead."""
         def apply() -> None:
             turn = self._ensure_turn()
             u = _usage_dict(usage)
             turn.prompt.update(
                 assembled_prompt=prompt, reply=reply, usage=u, flat_history_tokens=flat_history_tokens,
                 token_method=token_method, reply_source=reply_source,
-                prompt_tokens=(u or {}).get("input_tokens") or (u or {}).get("prompt_tokens"),
+                prompt_tokens=prompt_tokens if prompt_tokens is not None
+                else (u or {}).get("input_tokens") or (u or {}).get("prompt_tokens"),
             )
             if memory_ids_used is not None:
                 turn.prompt["memory_ids_used"] = list(memory_ids_used)

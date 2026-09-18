@@ -49,6 +49,11 @@ def test_parse_message(message, phase, key):
     assert (p.phase, p.key) == (phase, key)
 
 
+def test_explicit_add_memory_is_ingestion():
+    assert parse_message("Thread memory created.").key == "Thread memory creation"
+    assert classify("oracleagentmemory.core.thread", "Thread memory creation").stage == "ingestion"
+
+
 def test_parse_failure_is_an_end():
     p = parse_message("Embedding provider call failed with a retryable error.")
     assert p.phase == "end" and p.failed and p.key == "Embedding provider call"

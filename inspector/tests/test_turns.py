@@ -204,6 +204,15 @@ def test_record_prompt_marks_what_was_used(env):
     assert rec.prompt_tokens == 812 and rec.flat_history_tokens == 2400 and rec.reply_source == "model"
 
 
+def test_counted_prompt_tokens_without_usage(env):
+    memory, writer, _, _ = env
+    thread = memory.create_thread()
+    memory.inspector.record_prompt("p", "scripted reply", prompt_tokens=345, reply_source="scripted")
+    thread.add_messages([{"role": "user", "content": "x"}])
+    (_, rec, _), = writer.turns
+    assert rec.prompt_tokens == 345 and rec.usage is None
+
+
 def test_in_prompt_is_unknown_without_record_prompt(env):
     memory, writer, _, _ = env
     thread = memory.create_thread()

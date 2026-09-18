@@ -1,31 +1,33 @@
-"""Seed the store with every scripted conversation, one thread each.
+"""Seed aim_app with every scripted conversation, one thread each.
 
     uv run python scripts/seed.py            # add threads to the existing store
     uv run python scripts/seed.py --reset    # DROP and recreate the managed schema first
 
-Messages are added one exchange (user + assistant) per call, the way an agent
-writes them turn by turn, so extraction runs per turn and timestamps spread out.
-Extraction is an LLM call, so the memories differ run to run. Nothing
-downstream should depend on their exact content.
+Each conversation is replayed through the companion agent
+(`companion --script ... --replay`), so seeds take the same path as real use:
+search, prompt assembly, token counts, one add_messages per exchange, all
+recorded by memory-inspector. Extraction is an LLM call, so the memories
+differ run to run. Nothing downstream should depend on their exact content.
+Run apply_sql.py after --reset.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
+import subprocess
 import sys
-import time
 from pathlib import Path
-
-import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from oracleagentmemory.core.dbschemapolicy import SchemaPolicy  # noqa: E402
 
-from aim_demo.config import SEED_USER, load_settings  # noqa: E402
+from aim_demo.config import REPO_DIR, SEED_USER, load_settings  # noqa: E402
 from aim_demo.db import build_memory, create_pool  # noqa: E402
 
-CONVERSATIONS = Path(__file__).resolve().parent.parent / "conversations"
+COMPANION = REPO_DIR / "companion"
+CONVERSATIONS = COMPANION / "conversations"
 
 
 def clear_run_log(pool) -> None:
@@ -50,27 +52,18 @@ def main() -> None:
         # aim_live holds real conversations. A RECREATE there is unrecoverable.
         sys.exit(f"refusing --reset on {settings.db_user}: only {SEED_USER} may be reset")
 
-    pool = create_pool(settings)
-    policy = SchemaPolicy.RECREATE if args.reset else SchemaPolicy.CREATE_IF_NECESSARY
-    memory = build_memory(pool, settings, schema_policy=policy)
     if args.reset:
+        pool = create_pool(settings)
+        build_memory(pool, settings, schema_policy=SchemaPolicy.RECREATE).close()
         print("schema recreated")
         clear_run_log(pool)
+        pool.close()
 
+    # The companion is its own uv project; don't let this project's venv leak in.
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
     for path in sorted(CONVERSATIONS.glob("*.yaml")):
-        convo = yaml.safe_load(path.read_text())
-        start = time.perf_counter()
-        thread = memory.create_thread(user_id=convo["user_id"], agent_id=convo["agent_id"])
-        messages = convo["messages"]
-        for i in range(0, len(messages), 2):
-            thread.add_messages(messages[i : i + 2])
-        if convo.get("explicit_memory"):
-            thread.add_memory(convo["explicit_memory"], memory_type="fact")
-        print(f"{path.stem:<16} {convo['user_id']:<8} {thread.thread_id}  {time.perf_counter() - start:5.1f}s")
-
-    memory.wait_for_memory_extraction()
-    memory.close()
-    pool.close()
+        subprocess.run(["uv", "run", "--project", str(COMPANION), "companion", "--script", str(path),
+                        "--db-user", SEED_USER], check=True, env=env)
 
 
 if __name__ == "__main__":

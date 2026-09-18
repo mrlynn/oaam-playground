@@ -178,3 +178,17 @@ The order is chosen so daily use starts as soon as possible and the dashboard is
 - **Not instrumented:** the `*_async` methods (they pass through, with a one-time warning), `delete_user`, `delete_agent` and `update_thread` (they pass through silently). The "forget a user" story in M6 will need `delete_user`.
 - **Spike result:** LiteLLM callbacks can't see the package's LLM calls (friction 03:50). The `tokens` column stays empty for package spans.
 - **`agent/scripts/probe_inspector.py`** is the end-to-end check: two real turns, a correction and a thread delete on a throwaway user, then assertions on turn numbering, unmapped events and the delete diff. With `MEMORY_INSPECTOR_FAIL_WRITES=1` it confirms the agent finishes with nothing written. Rerun it after any package bump.
+
+### Step 3 (companion)
+- **Layout:** `companion/` is its own uv project (`src/companion/`: `config.py`, `prompt.py`, `agent.py`, `why.py`, `cli.py`). It depends on `inspector/` by path, and builds its own pool and client in `config.py`. Settings are `COMPANION_*`, falling back to the repo's `agent/.env` and `infra/.env` so no secrets are copied.
+- **Integration size:** 1 import, the `inspect(...)` call, the `record_prompt(...)` call, and `last_turn` for the post-reply summary. That's four touch points, well under the 10-line target. `/why` also reads `AIM_V_TURNS` to find the turn that created each memory, which is an extra feature, not needed for instrumentation.
+- **Search asks for 10 and puts the top 5 in the prompt,** so "also returned" results exist for the "why" view. Memories are formatted as `[type] content`. Records have no `formatted_content` (the plan had assumed one).
+- **`record_prompt` gained `prompt_tokens`** so replay turns, which have no model usage, record a counted size.
+- **Flat history covers the current thread only.** See `docs/token-method.md`, which also records that scoped prompts are *larger* than flat ones in early turns.
+- **Conversations moved** to `companion/conversations/`. `seed.py --reset` recreates `aim_app`, clears its run log, then runs `companion --script` for each YAML in a subprocess, with the parent's `VIRTUAL_ENV` removed.
+- **Verified:**
+  - A fresh reseed produces 3 runs, 12 turns and 337 events, with 0 unattributed.
+  - `other` is 18 of 337 events. The one unmapped event (`Thread memory creation`) is now mapped.
+  - The stale fact reproduces: "us-east-1" is created at turn 2 of `support_01`, survives the correction at turn 3, and is retrieved later.
+  - The REPL, driven through stdin as u_alice on `aim_app`, gave a real miss that `/why` explained (friction 04:25).
+- **Not yet done from step 3/4:** nothing is in `aim_live` yet, because daily use is yours to start. The companion still has its working name.
