@@ -217,3 +217,18 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
   - Findings: 4 crowded conversations, 5 duplicate clusters, 6 superseded, 6 transient, 2 scope mismatches.
   - The support_03 turn reproduces the 04:25 miss deterministically. The email-only preference isn't in the top 10. Its five prompt slots went to an "awaiting reply" question, the stale us-east-1 fact, the correction, a near-copy of the correction, and one guideline. `crowded_turn` reports "3 of 5".
 - **Label fix:** a memory that is both transient and "answered" later is now labelled transient inside `crowded_turn` too, matching `drop_overlaps`.
+
+### Step 3 (dashboard: `/memories` and "why" badges)
+- **`/memories`** has two tabs:
+  - **Findings** (the default), grouped by severity. The header shows the check number, the time, how many memories and close pairs it looked at, the judge (with its call and cache counts in a hint), and new, open and resolved counts against the previous run with the same scope and judge. Resolved findings are listed in a `<details>` at the bottom.
+  - **All memories** (`?tab=all&sort=retrieved|created|findings`). Retrieval counts cover instrumented turns only, and the page says so.
+- **Each finding card** shows its memories with their role (stale, current, keep, or "X in prompt" for crowded turns), links to where each was created, "see why" links for affected turns, evidence labelled for what it is (cosine distance, matched text, "LLM judgment · model" with its rationale), and the suggested fix in a code block.
+- **Pure helpers** in `lib/findings.ts` (`compareRuns`, `badgesByMemory`, `memoryStats`, `parseSort`) are tested under `node --test` (16 web tests). Badges go only on the memory a fix would remove: the stale side of a supersession, and the extra copies of a duplicate. There's one badge per label, per memory.
+- **"Why" badges:** results in the "why" view carry badges from the latest check, linked to `/memories#finding-<id>`. The run page fetches findings only in "why" mode.
+- **An app-bar nav** (Runs and Memory) was added.
+- **Change from reviewing it in the browser:** a supersession can leave detail only in the stale memory. "Will get read-only accounts… expiring after 90 days" was superseded by "accounts have been created", which drops the expiry. The fix now says to fold unique detail into the current memory with `update_memory` **before** deleting. That's covered by a test.
+- **Seen on the seeds:** three of the four most-retrieved memories are flagged (one stale, two transient). The memories that reach the model most often are frequently the ones that shouldn't be there. That's worth a line in the friction summary.
+- **Verified:**
+  - `/memories` findings and All memories at 1440 px, and at 375 px in dark mode with no page-level horizontal scroll (the table scrolls inside its container).
+  - The "why" view on the support_03 turn shows "transient", "stale" and "duplicate ×3" badges.
+  - `tsc`, lint and tests are clean. `npm run build` was not rerun (a dev server was running in `web/`); it goes in the end-of-M4 checks.

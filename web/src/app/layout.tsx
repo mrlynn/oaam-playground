@@ -37,9 +37,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                     Memory Inspector
                   </Typography>
                 </Link>
-                <Typography variant="body2" color="text.secondary" component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                <Typography variant="body2" color="text.secondary" component="span" sx={{ display: { xs: "none", md: "inline" } }}>
                   Oracle AI Agent Memory
                 </Typography>
+                <Box component="nav" aria-label="Main" sx={{ display: "flex", gap: 2 }}>
+                  <Link href="/runs">
+                    <Typography variant="body2" component="span">Runs</Typography>
+                  </Link>
+                  <Link href="/memories">
+                    <Typography variant="body2" component="span">Memory</Typography>
+                  </Link>
+                </Box>
                 <Box sx={{ flexGrow: 1 }} />
                 <Suspense fallback={null}>
                   <StoreInfoChips />

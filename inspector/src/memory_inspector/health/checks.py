@@ -136,7 +136,10 @@ def _superseded(p: Pair, *, stale: Memory, current: Memory, method: str, evidenc
         detail=(f"It was superseded by {quote(current.content, 110)}, but both are stored and both can be retrieved: "
                 f"they sit {p.distance:.3f} apart (cosine), so a search for one usually returns the other. "
                 "Extraction appends corrections instead of revising the earlier memory."),
-        suggestion="Delete the stale memory:\n" + _delete([stale.id]),
+        suggestion=("Read both first: if the stale memory holds details the current one lacks, fold them in, then "
+                    "delete the stale one.\n"
+                    f'memory.update_memory("{current.id}", content="…")  # only if something would be lost\n'
+                    + _delete([stale.id])),
         method=method, evidence={**evidence, "stale": stale.id, "current": current.id})
 
 

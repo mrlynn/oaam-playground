@@ -45,6 +45,8 @@ def test_superseded_names_the_stale_memory_and_how_to_delete_it():
     assert f.kind == "superseded" and f.severity == "high"
     assert f.evidence["stale"] == "east" and f.evidence["current"] == "west"
     assert 'memory.delete_memory("east")' in f.suggestion
+    # A supersession can still leave detail only in the stale memory: say so before "delete".
+    assert f.suggestion.index("update_memory") < f.suggestion.index("delete_memory")
     assert out.stale == {"east": "west"}
 
 

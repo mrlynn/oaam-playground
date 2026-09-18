@@ -60,3 +60,53 @@ export type TurnPrompt = {
 
 /** Where a memory was first seen created in the run log, in any run. */
 export type MemoryOrigin = { memory_id: string; run_id: string; turn: number };
+
+// ---- memory health (memory-inspector check) ----------------------------------
+
+export type CheckRunRow = {
+  check_run_id: number;
+  started_at: Date;
+  finished_at: Date | null;
+  scope_user_id: string | null;
+  params: Record<string, unknown> | null;
+  counts: {
+    memories?: number;
+    candidate_pairs?: number;
+    judge_calls?: number;
+    judge_cache_hits?: number;
+    unparsed?: number;
+    findings?: Record<string, number>;
+  } | null;
+  judge_model: string | null;
+  package_version: string | null;
+};
+
+export type FindingKind =
+  | "superseded" | "contradiction" | "duplicate" | "near_duplicate"
+  | "transient" | "crowded_turn" | "scope_mismatch" | "orphan_chunks";
+
+export type FindingRow = {
+  finding_id: number;
+  check_run_id: number;
+  fingerprint: string;
+  kind: FindingKind;
+  severity: "high" | "medium" | "low";
+  user_id: string | null;
+  memory_ids: string[] | null;
+  turns: { run_id: string; turn: number }[] | null;
+  title: string;
+  detail: string | null;
+  suggestion: string | null;
+  evidence: Record<string, unknown> | null;
+  method: string;
+};
+
+/** A previous run's finding, enough to say what was resolved. */
+export type FindingStub = Pick<FindingRow, "fingerprint" | "kind" | "title">;
+
+export type RetrievalStat = {
+  record_id: string;
+  retrieved: number;
+  in_prompt: number;
+  last_retrieved: Date | null;
+};

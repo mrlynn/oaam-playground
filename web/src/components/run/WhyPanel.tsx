@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import HintChip from "@/components/HintChip";
 import { fmtDistance } from "@/components/run/MemoryStateCard";
+import type { Badge } from "@/lib/findings";
 import { type PromptLabel, promptLabel } from "@/lib/memoryState";
 import { memoryTypeColor } from "@/lib/memoryTypes";
 import type { Retrieval, TurnPrompt, TurnRow } from "@/lib/runTypes";
@@ -20,6 +21,8 @@ export type WhyRow = Retrieval & {
   /** Thread the record is stored on (for records created before the run log). */
   storedThread: string | null;
   gone: boolean;
+  /** Open findings from the latest health check that accuse this memory. */
+  badges: Badge[];
 };
 
 type Props = {
@@ -130,6 +133,11 @@ function WhyResult({ runId, row: r, maxDistance, turnHref }: { runId: string; ro
         {isMessage ? (
           <HintChip size="small" variant="outlined" color="warning" label="raw message" hint="A raw message chunk, not a durable memory. Searches without record_types rank messages and memories together." />
         ) : null}
+        {r.badges.map((b) => (
+          <Link key={`${b.findingId}-${b.label}`} href={`/memories#finding-${b.findingId}`}>
+            <HintChip size="small" clickable color={b.kind === "superseded" || b.kind === "contradiction" ? "error" : "warning"} label={b.label} hint={`Health check: ${b.hint}`} />
+          </Link>
+        ))}
       </Stack>
       <Typography variant="body2" sx={{ overflowWrap: "anywhere", mb: 0.5, textDecoration: r.gone ? "line-through" : "none" }}>
         {r.content ?? <em>(content not available)</em>}

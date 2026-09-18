@@ -1,7 +1,16 @@
 import "server-only";
 
 import { query, v } from "./db";
-import type { MemoryOrigin, RunRow, TurnPrompt, TurnRow } from "./runTypes";
+import type {
+  CheckRunRow,
+  FindingRow,
+  FindingStub,
+  MemoryOrigin,
+  RetrievalStat,
+  RunRow,
+  TurnPrompt,
+  TurnRow,
+} from "./runTypes";
 
 export type StoreInfo = {
   schema_version: string | null;
@@ -109,7 +118,7 @@ export function getThreadMemories(
 
 // ---- run log (memory-inspector) --------------------------------------------
 
-export type { MemoryOrigin, RunRow, TurnPrompt, TurnRow } from "./runTypes";
+export type { CheckRunRow, FindingRow, FindingStub, MemoryOrigin, RetrievalStat, RunRow, TurnPrompt, TurnRow } from "./runTypes";
 
 /** `:p0, :p1, ...` placeholders and binds for an IN list. */
 function inList(prefix: string, values: string[]): { sql: string; binds: Record<string, string> } {
@@ -177,21 +186,95 @@ export async function getMessagesByIds(ids: string[]): Promise<MessageRow[]> {
   );
 }
 
-/** The run and turn that created each memory, across every run in the schema. */
-export async function getMemoryOrigins(ids: string[]): Promise<MemoryOrigin[]> {
-  if (!ids.length) return [];
-  const { sql, binds } = inList("m", ids.slice(0, MAX_IDS));
+/** The run and turn that created each memory, across every run in the schema. Every memory if ids is omitted. */
+export async function getMemoryOrigins(ids?: string[]): Promise<MemoryOrigin[]> {
+  if (ids && !ids.length) return [];
+  const list = ids ? inList("m", ids.slice(0, MAX_IDS)) : null;
   return query<MemoryOrigin>(
     `select jt.memory_id, t.run_id, min(t.turn) as turn
        from ${v("aim_v_turns")} t,
             json_table(t.memory_diff, '$.created[*]' columns (memory_id varchar2(128) path '$.id')) jt
-      where jt.memory_id in (${sql})
+      ${list ? `where jt.memory_id in (${list.sql})` : ""}
       group by jt.memory_id, t.run_id`,
-    binds,
+    list?.binds ?? {},
   );
 }
 
 /** Turn counts for the runs list. */
 export function listRuns(): Promise<Pick<RunRow, "run_id" | "source" | "turn_count">[]> {
   return query(`select run_id, source, turn_count from ${v("aim_v_runs")}`);
+}
+
+// ---- memory health ------------------------------------------------------------
+
+/** Every current memory in the store (the /memories table). */
+export function listAllMemories(includeExpired: boolean): Promise<MemoryRow[]> {
+  return query<MemoryRow>(
+    `select memory_id, memory_type, content, thread_id, user_id, agent_id, created_at, expires_at,
+            is_expired, origin, extractor_scope, importance, entities, extraction_id,
+            after_message_position
+       from ${v("aim_v_memories")}
+      where (:includeExpired = 1 or is_expired = 0)`,
+    { includeExpired: includeExpired ? 1 : 0 },
+  );
+}
+
+/** How often each record came back from an instrumented search, and how often it reached the prompt. */
+export function getRetrievalStats(): Promise<RetrievalStat[]> {
+  return query<RetrievalStat>(
+    `select record_id, count(*) as retrieved, sum(case when in_prompt = 1 then 1 else 0 end) as in_prompt,
+            max(started_at) as last_retrieved
+       from ${v("aim_v_memory_retrievals")}
+      group by record_id`,
+  );
+}
+
+export async function getLatestCheckRun(): Promise<CheckRunRow | null> {
+  const rows = await query<CheckRunRow>(
+    `select check_run_id, started_at, finished_at, scope_user_id, params, counts, judge_model, package_version
+       from ${v("aim_v_check_runs")}
+      where finished_at is not null
+      order by check_run_id desc
+      fetch first 1 row only`,
+  );
+  return rows[0] ?? null;
+}
+
+/** The run before `run` with the same scope and judge: the only fair comparison. */
+export async function getPreviousCheckRun(run: CheckRunRow): Promise<CheckRunRow | null> {
+  const rows = await query<CheckRunRow>(
+    `select check_run_id, started_at, finished_at, scope_user_id, params, counts, judge_model, package_version
+       from ${v("aim_v_check_runs")}
+      where finished_at is not null and check_run_id < :id
+        and decode(scope_user_id, :scope, 1, 0) = 1
+        and decode(judge_model, :judge, 1, 0) = 1
+      order by check_run_id desc
+      fetch first 1 row only`,
+    { id: run.check_run_id, scope: run.scope_user_id, judge: run.judge_model },
+  );
+  return rows[0] ?? null;
+}
+
+export function getFindings(checkRunId: number): Promise<FindingRow[]> {
+  return query<FindingRow>(
+    `select finding_id, check_run_id, fingerprint, kind, severity, user_id, memory_ids, turns,
+            title, detail, suggestion, evidence, method
+       from ${v("aim_v_findings")}
+      where check_run_id = :checkRunId
+      order by case severity when 'high' then 0 when 'medium' then 1 else 2 end, kind, finding_id`,
+    { checkRunId },
+  );
+}
+
+export function getFindingStubs(checkRunId: number): Promise<FindingStub[]> {
+  return query<FindingStub>(
+    `select fingerprint, kind, title from ${v("aim_v_findings")} where check_run_id = :checkRunId`,
+    { checkRunId },
+  );
+}
+
+/** Findings of the latest check run, or none if there has never been one. */
+export async function getLatestFindings(): Promise<FindingRow[]> {
+  const run = await getLatestCheckRun();
+  return run ? getFindings(run.check_run_id) : [];
 }

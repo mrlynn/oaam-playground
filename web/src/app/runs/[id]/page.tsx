@@ -5,8 +5,10 @@ import ThreadView from "@/components/ThreadView";
 import RunView from "@/components/run/RunView";
 import type { WhyRow } from "@/components/run/WhyPanel";
 import { shortId } from "@/lib/format";
+import { badgesByMemory } from "@/lib/findings";
 import { memoryStateAt, parseTurn, turnByMessage } from "@/lib/memoryState";
 import {
+  getLatestFindings,
   getMemoriesByIds,
   getMemoryOrigins,
   getMessages,
@@ -52,12 +54,14 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
       (a, b) => a.search - b.search || a.rank - b.rank,
     );
     const ids = [...new Set(retrieved.map((r) => r.record_id))];
-    const [rows, msgs, origins, p] = await Promise.all([
+    const [rows, msgs, origins, p, findings] = await Promise.all([
       getMemoriesByIds(ids),
       getMessagesByIds(retrieved.filter((r) => r.record_type === "message").map((r) => r.record_id)),
       getMemoryOrigins(ids),
       getTurnPrompt(id, turn),
+      getLatestFindings(),
     ]);
+    const badges = badgesByMemory(findings);
     prompt = p;
     const asOfTurn = new Map(state.map((m) => [m.id, m]));
     const current = new Map(rows.map((m) => [m.memory_id, m]));
@@ -73,6 +77,7 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
         origin: originOf.get(r.record_id) ?? null,
         storedThread: row?.thread_id ?? msg?.thread_id ?? r.thread_id,
         gone: !row && !msg,
+        badges: badges.get(r.record_id) ?? [],
       };
     });
   }
