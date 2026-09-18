@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 import litellm
+from oracleagentmemory.core import MemoryExtractionConfig
 
 from .prompt import flat_prompt, render, scoped_prompt
 
@@ -74,8 +75,10 @@ class Companion:
         self.last: Reply | None = None
 
     def new_thread(self) -> str:
-        kwargs: dict[str, Any] = ({"memory_extraction_custom_instructions": self.extraction_instructions}
-                                  if self.extraction_instructions else {})
+        kwargs: dict[str, Any] = {}
+        if self.extraction_instructions:
+            kwargs["memory_extraction_config"] = MemoryExtractionConfig(
+                memory_extraction_custom_instructions=self.extraction_instructions)
         if self._make_llm is not None:
             kwargs["llm"] = self._make_llm(self.model)
         self.thread = self.memory.create_thread(user_id=self.user_id, agent_id=self.agent_id, **kwargs)

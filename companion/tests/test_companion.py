@@ -164,6 +164,7 @@ def test_why_before_anything_was_said():
 def test_extraction_instructions_reach_the_thread_only_when_set():
     memory = FakeMemory()
     Companion(memory, user_id="me", agent_id="companion", model="m").new_thread()
-    assert "memory_extraction_custom_instructions" not in memory.thread_kwargs  # scripted replays
+    assert "memory_extraction_config" not in memory.thread_kwargs  # scripted replays
     Companion(memory, user_id="me", agent_id="companion", model="m", extraction_instructions="keep it durable").new_thread()
-    assert memory.thread_kwargs["memory_extraction_custom_instructions"] == "keep it durable"
+    config = memory.thread_kwargs["memory_extraction_config"]
+    assert config.memory_extraction_custom_instructions == "keep it durable"
