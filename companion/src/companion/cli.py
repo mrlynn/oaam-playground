@@ -3,6 +3,7 @@
     companion                                   chat (schema aim_live, one thread per session)
     companion --script conversations/x.yaml     replay a scripted conversation (schema aim_app)
     companion --script x.yaml --live            same, but the model writes the replies
+    companion --web                             chat in the browser (http://localhost:8765)
 
 In the chat: /why explains the last reply, /new starts a new thread, /quit exits.
 """
@@ -101,11 +102,20 @@ def main(argv: list[str] | None = None) -> None:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--script", help="YAML conversation to run instead of chatting")
     parser.add_argument("--live", action="store_true", help="with --script: the model writes replies")
+    parser.add_argument("--web", action="store_true", help="serve the chat as a web page instead")
+    parser.add_argument("--host", default="127.0.0.1", help="with --web: address to listen on (default 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8765, help="with --web: port (default 8765)")
     parser.add_argument("--db-user", help="schema (default: aim_live for chat, aim_app for --script)")
     parser.add_argument("--user-id", help="memory user id (default: COMPANION_USER_ID or 'me'; the YAML's for --script)")
     args = parser.parse_args(argv)
     if args.live and not args.script:
         parser.error("--live only applies to --script")
+    if args.web and args.script:
+        parser.error("--web and --script don't mix")
+    if args.web:
+        from .web import serve
+        serve(load_config(args.db_user, args.user_id), host=args.host, port=args.port)
+        return
     (run_script if args.script else chat)(args)
 
 

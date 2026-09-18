@@ -26,6 +26,18 @@
       ],
       "port": 3100,
       "url": "http://localhost:3100"
+    },
+    {
+      "name": "companion",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "--directory",
+        "companion",
+        "run",
+        "companion",
+        "--web"
+      ],
+      "port": 8765
     }
   ]
 }

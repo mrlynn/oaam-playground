@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companion</title>
+<style>
+  :root {
+    --bg: #f7f6f3; --panel: #ffffff; --ink: #1d1c1a; --muted: #6b6862; --line: #e4e1db;
+    --accent: #2f5d8a; --accent-ink: #ffffff; --you: #eaf0f6; --warn: #9a3b1b; --ok: #2c6e49;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --panel: #1e1e1c; --ink: #ecebe8; --muted: #9c9993; --line: #33322f;
+      --accent: #7fa9d4; --accent-ink: #10181f; --you: #1f2a35; --warn: #e08a68; --ok: #7cc49a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line);
+           background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  #meta { color: var(--muted); font-size: 13px; font-family: var(--mono); flex: 1; min-width: 0;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+           border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  main { flex: 1; display: flex; min-height: 0; }
+  #chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #log { flex: 1; overflow-y: auto; padding: 20px 16px 8px; }
+  .inner { max-width: 760px; margin: 0 auto; }
+  .msg { margin: 0 0 18px; }
+  .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .msg .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.you .text { background: var(--you); border-radius: 8px; padding: 8px 12px; display: inline-block; max-width: 100%; }
+  .msg.note .text { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  .msg.error .text { color: var(--warn); font-size: 13px; font-family: var(--mono); }
+  .status { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 4px; display: flex;
+            gap: 10px; flex-wrap: wrap; align-items: center; }
+  .status a, .status button.link { color: var(--accent); background: none; border: 0; padding: 0; font: inherit;
+            cursor: pointer; text-decoration: none; }
+  .status a:hover, .status button.link:hover { text-decoration: underline; }
+  .pending { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .4; } }
+  form { border-top: 1px solid var(--line); background: var(--panel); padding: 12px 16px; }
+  form .inner { display: flex; gap: 8px; align-items: flex-end; }
+  textarea { flex: 1; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+             border-radius: 8px; padding: 8px 10px; resize: none; max-height: 200px; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  aside { width: 400px; border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto;
+          padding: 16px; display: none; }
+  aside.open { display: block; }
+  aside h2 { font-size: 14px; margin: 0 0 4px; display: flex; justify-content: space-between; align-items: center; }
+  aside .q { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .row { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .row.out { opacity: .65; }
+  .row .top { display: flex; gap: 8px; align-items: center; font-size: 12px; font-family: var(--mono); }
+  .chip { border-radius: 4px; padding: 0 5px; font-size: 11px; border: 1px solid var(--line); }
+  .chip.in { border-color: var(--ok); color: var(--ok); }
+  .bar { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); }
+  .row .content { font-size: 13px; margin: 6px 0 4px; overflow-wrap: anywhere; }
+  .row .origin { font-size: 12px; color: var(--muted); }
+  .row .origin a { color: var(--accent); }
+  @media (max-width: 860px) {
+    aside { position: fixed; inset: auto 0 0 0; width: auto; max-height: 70vh; border-left: 0;
+            border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(0,0,0,.15); z-index: 2; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>companion</h1>
+  <div id="meta">connecting…</div>
+  <button id="whyBtn" type="button" disabled title="What the last reply was built from">why</button>
+  <button id="newBtn" type="button" disabled title="Start a new thread. Memories carry across threads.">new thread</button>
+</header>
+<main>
+  <div id="chat">
+    <div id="log" aria-live="polite"><div class="inner" id="msgs"></div></div>
+    <form id="form">
+      <div class="inner">
+        <textarea id="input" rows="1" placeholder="Talk through your work…" disabled></textarea>
+        <button class="primary" id="send" disabled>Send</button>
+      </div>
+      <div class="inner hint">Enter sends, Shift+Enter for a new line. /why and /new work here too.</div>
+    </form>
+  </div>
+  <aside id="why" aria-label="Why"></aside>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const msgs = $("msgs"), log = $("log"), input = $("input"), send = $("send");
+  const whyBtn = $("whyBtn"), newBtn = $("newBtn"), aside = $("why");
+  let info = null, sid = null, thread = null, busy = false, lastStatus = null;
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const scroll = () => { log.scrollTop = log.scrollHeight; };
+  const short = (id) => id ? id.slice(0, 8) + "…" : "";
+  const dash = (path) => info && info.dashboard_url ? info.dashboard_url + path : null;
+  const dashLink = (href, text) => {
+    const a = el("a", null, text);
+    a.href = href; a.target = "_blank"; a.rel = "noopener";
+    a.title = "Opens the inspector dashboard. It must read this schema (AIM_SCHEMA=" + info.db_user.toUpperCase() + ").";
+    return a;
+  };
+
+  function add(kind, who, text) {
+    const m = el("div", "msg " + kind);
+    if (who) m.append(el("div", "who", who));
+    m.append(el("div", "text", text));
+    msgs.append(m); scroll();
+    return m;
+  }
+
+  function setMeta() {
+    $("meta").textContent = `${info.db_user} · user ${info.user_id} · ${info.model} · thread ${short(thread)}`;
+    $("meta").title = thread || "";
+  }
+
+  function setBusy(b) {
+    busy = b;
+    input.disabled = send.disabled = newBtn.disabled = b;
+    if (!b) input.focus();
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const err = new Error(body.detail || res.statusText);
+      err.status = res.status;
+      throw err;
+    }
+    return res;
+  }
+
+  async function startSession(reason) {
+    const s = await (await api("/api/sessions", { method: "POST" })).json();
+    sid = s.session_id; thread = s.thread_id;
+    setMeta();
+    add("note", null, (reason ? reason + " " : "") + `new thread ${short(thread)}`);
+  }
+
+  async function newThread() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const s = await (await api(`/api/sessions/${sid}/new`, { method: "POST" })).json();
+      thread = s.thread_id; setMeta();
+      add("note", null, `new thread ${short(thread)}`);
+      whyBtn.disabled = true; closeWhy();
+    } catch (e) { await recover(e); }
+    setBusy(false);
+  }
+
+  async function recover(e) {
+    if (e.status === 404) return startSession("The server restarted, so this is a fresh session.");
+    add("error", null, e.message);
+  }
+
+  async function turn(text) {
+    setBusy(true);
+    add("you", "you", text);
+    const pending = add("note", null, "thinking…");
+    pending.querySelector(".text").classList.add("pending");
+    let reply = null;
+    try {
+      let res;
+      try {
+        res = await api(`/api/sessions/${sid}/turns`, { method: "POST", body: JSON.stringify({ message: text }) });
+      } catch (e) {
+        if (e.status !== 404) throw e;
+        await startSession("The server restarted, so this is a fresh session.");
+        res = await api(`/api/sessions/${sid}/turns`, { method: "POST", body: JSON.stringify({ message: text }) });
+      }
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+          if (!line) continue;
+          const ev = JSON.parse(line);
+          if (ev.type === "reply") {
+            pending.remove();
+            reply = add("assistant", "companion", ev.text);
+            const st = el("div", "status");
+            const s = el("span", "pending", `${ev.in_prompt} of ${ev.retrieved} memories in prompt · remembering…`);
+            st.append(s); reply.append(st); scroll();
+            reply._status = s; reply._meta = ev;
+          } else if (ev.type === "remembered") {
+            onRemembered(reply, ev);
+          } else if (ev.type === "error") {
+            pending.remove();
+            if (reply && reply._status) { reply._status.classList.remove("pending"); reply._status.textContent = "not remembered"; }
+            add("error", null, `${ev.stage === "reply" ? "no reply" : "remembering failed"}: ${ev.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      pending.remove();
+      add("error", null, e.message);
+    }
+    setBusy(false);
+  }
+
+  function onRemembered(reply, ev) {
+    const parts = ["created", "updated", "deleted"].filter((k) => ev[k]).map((k) => `${ev[k]} ${k}`);
+    const s = reply._status;
+    s.classList.remove("pending");
+    s.textContent = `remembered in ${ev.seconds.toFixed(1)}s: ${parts.join(", ") || "nothing new"}`;
+    const st = s.parentNode;
+    if (lastStatus && lastStatus._why) lastStatus._why.remove();  // /why only explains the last reply
+    const why = el("button", "link", "why?");
+    why.type = "button"; why.onclick = showWhy;
+    st.append(why); st._why = why; lastStatus = st;
+    const t = reply._meta.thread_id;
+    if (ev.turn && dash("")) {
+      st.append(dashLink(dash(`/runs/${t}?turn=${ev.turn}`), `turn ${ev.turn} in inspector`));
+      st.append(dashLink(dash(`/runs/${t}/turn/${ev.turn}`), "lifecycle"));
+    }
+    whyBtn.disabled = false;
+  }
+
+  function closeWhy() { aside.classList.remove("open"); aside.replaceChildren(); }
+
+  async function showWhy() {
+    let data;
+    try { data = await (await api(`/api/sessions/${sid}/why`)).json(); }
+    catch (e) { return recover(e); }
+    aside.replaceChildren();
+    const h = el("h2", null, "why");
+    const x = el("button", null, "close"); x.type = "button"; x.onclick = closeWhy;
+    h.append(x); aside.append(h);
+    if (!data.message) {
+      aside.append(el("div", "q", "Nothing to explain yet: say something first."));
+    } else {
+      aside.append(el("div", "q", `“${data.message}”`));
+      if (!data.rows.length) aside.append(el("div", "q", "Search returned nothing, so the reply used no memories."));
+      for (const r of data.rows) {
+        const row = el("div", "row" + (r.in_prompt ? "" : " out"));
+        const top = el("div", "top");
+        top.append(el("span", null, `#${r.rank}`), el("span", null, r.type));
+        const bar = el("span", "bar"); const fill = el("span"); fill.style.width = `${Math.max(2, Math.min(100, 100 * (1 - r.distance)))}%`;
+        bar.append(fill); bar.title = "1 − cosine distance: fuller is closer"; top.append(bar);
+        top.append(el("span", null, r.distance.toFixed(3)));
+        top.append(el("span", "chip" + (r.in_prompt ? " in" : ""), r.in_prompt ? "in prompt" : "also returned"));
+        row.append(top, el("div", "content", r.content));
+        const o = el("div", "origin");
+        if (r.origin_run && dash("")) o.append(dashLink(dash(`/runs/${r.origin_run}?turn=${r.origin_turn}`), r.origin));
+        else o.textContent = r.origin;
+        row.append(o); aside.append(row);
+      }
+      if (data.thread_id && dash("")) {
+        const more = el("div", "origin");
+        more.append(dashLink(dash(`/runs/${data.thread_id}?view=why`), "full why, with health findings, in the inspector →"));
+        aside.append(more);
+      }
+    }
+    aside.classList.add("open");
+  }
+
+  function submit() {
+    const text = input.value.trim();
+    if (!text || busy) return;
+    input.value = ""; grow();
+    if (text === "/why") return showWhy();
+    if (text === "/new") return newThread();
+    if (text === "/quit" || text === "/exit") return add("note", null, "Close the tab to leave. The server keeps running for other tabs.");
+    turn(text);
+  }
+
+  function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 200) + "px"; }
+
+  $("form").addEventListener("submit", (e) => { e.preventDefault(); submit(); });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
+  });
+  input.addEventListener("input", grow);
+  whyBtn.onclick = () => aside.classList.contains("open") ? closeWhy() : showWhy();
+  newBtn.onclick = newThread;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeWhy(); });
+
+  (async () => {
+    try {
+      info = await (await api("/api/info")).json();
+      await startSession();
+      add("note", null, "Each tab is its own thread. Memories carry across threads, and across the terminal companion on the same schema.");
+      setBusy(false);
+    } catch (e) {
+      add("error", null, `Can't reach the companion: ${e.message}`);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
