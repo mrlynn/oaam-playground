@@ -32,7 +32,8 @@ jobs:
         working-directory: ${{ matrix.package }}
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv publishes no floating major tag after v7, so pin the release.
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true
           cache-dependency-glob: ${{ matrix.package }}/uv.lock
