@@ -41,7 +41,7 @@ Turns run one at a time, even across tabs. The inspector tracks the open turn pe
 2. Put the top 5 in the system prompt, plus the last 6 messages of this thread.
 3. Call the model through LiteLLM and print the reply.
 4. Count the flat-history tokens, the prompt you'd send with no memory at all (see [token method](../docs/token-method.md)), and report the turn with `record_prompt`.
-5. `add_messages` writes the exchange, and the package extracts memories from it.
+5. `add_messages` writes the exchange, and the package extracts memories from it. In chat, each thread is created with the inspector's tested extraction instructions (`EXTRACTION_INSTRUCTIONS`), which keep conversation state like "asked the user…; awaiting reply" out of memory. Scripted replays leave them off, so the seeds still show the problem the health check finds.
 
 ## Scripted conversations
 

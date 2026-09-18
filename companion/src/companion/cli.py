@@ -19,7 +19,7 @@ from pathlib import Path
 import yaml
 
 from .agent import Companion, Remembered
-from .config import load_config, open_memory
+from .config import LIVE_EXTRACTION_INSTRUCTIONS, load_config, open_memory
 from .why import find_origins, render_why
 
 TTY = sys.stdout.isatty()
@@ -38,7 +38,8 @@ def diff_summary(rem: Remembered) -> str:
 def chat(args: argparse.Namespace) -> None:
     cfg = load_config(args.db_user, args.user_id)
     pool, memory = open_memory(cfg, source="live")
-    comp = Companion(memory, user_id=cfg.user_id, agent_id=cfg.agent_id, model=cfg.llm_model)
+    comp = Companion(memory, user_id=cfg.user_id, agent_id=cfg.agent_id, model=cfg.llm_model,
+                     extraction_instructions=LIVE_EXTRACTION_INSTRUCTIONS)
     width = min(shutil.get_terminal_size().columns, 100)
     try:
         thread_id = comp.new_thread()

@@ -191,7 +191,7 @@ def serve(cfg: Any, *, host: str, port: int) -> None:
 
     import uvicorn
 
-    from .config import open_memory
+    from .config import LIVE_EXTRACTION_INSTRUCTIONS, open_memory
     from .why import find_origins
 
     token = os.getenv("COMPANION_WEB_TOKEN") or None
@@ -207,7 +207,8 @@ def serve(cfg: Any, *, host: str, port: int) -> None:
     dashboard = os.getenv("COMPANION_DASHBOARD_URL", "http://localhost:3000").rstrip("/") or None
     app = create_app(
         Info(cfg.db_user, cfg.user_id, cfg.agent_id, cfg.llm_model, dashboard),
-        lambda: Companion(memory, user_id=cfg.user_id, agent_id=cfg.agent_id, model=cfg.llm_model),
+        lambda: Companion(memory, user_id=cfg.user_id, agent_id=cfg.agent_id, model=cfg.llm_model,
+                          extraction_instructions=LIVE_EXTRACTION_INSTRUCTIONS),
         lambda ids: find_origins(pool, ids),
         token=token, on_shutdown=close)
     shown = "localhost" if is_loopback(host) else host

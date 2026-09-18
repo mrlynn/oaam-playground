@@ -58,19 +58,23 @@ class Remembered:
 
 class Companion:
     def __init__(self, memory: Any, *, user_id: str, agent_id: str, model: str,
-                 chat: Chat = litellm_chat, count: Counter = litellm_count) -> None:
+                 chat: Chat = litellm_chat, count: Counter = litellm_count,
+                 extraction_instructions: str | None = None) -> None:
         self.memory = memory
         self.user_id = user_id
         self.agent_id = agent_id
         self.model = model
         self._chat = chat
         self._count = count
+        self.extraction_instructions = extraction_instructions
         self.thread: Any = None
         self.history: list[dict[str, str]] = []
         self.last: Reply | None = None
 
     def new_thread(self) -> str:
-        self.thread = self.memory.create_thread(user_id=self.user_id, agent_id=self.agent_id)
+        kwargs = ({"memory_extraction_custom_instructions": self.extraction_instructions}
+                  if self.extraction_instructions else {})
+        self.thread = self.memory.create_thread(user_id=self.user_id, agent_id=self.agent_id, **kwargs)
         self.history = []
         return self.thread.thread_id
 

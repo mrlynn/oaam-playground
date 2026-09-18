@@ -20,6 +20,12 @@ from oracleagentmemory.core.llms.llm import Llm
 from oracleagentmemory.core.oracleagentmemory import OracleAgentMemory
 
 from memory_inspector import InspectedMemory, inspect
+from memory_inspector.health.checks import EXTRACTION_INSTRUCTIONS
+
+# Live chat (terminal and web) keeps only durable memories. Scripted replays
+# don't use it: the seeds must still produce the transient memories that the
+# demo and the labs find and fix.
+LIVE_EXTRACTION_INSTRUCTIONS = EXTRACTION_INSTRUCTIONS
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 REPO_DIR = PROJECT_DIR.parent
