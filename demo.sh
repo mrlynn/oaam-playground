@@ -10,7 +10,8 @@
 #   :3000  the inspector (web/), which also serves /chat and /docs by proxy
 #   :8765  the companion's chat (companion/), writing to the chosen schema
 #   :3101  the docs site (site/), built with SITE_MODE=demo into site/build-demo
-# A chat server already running on its port is reused if it has the same schema and user.
+# A chat server already running on its port is reused if it has the same schema and user, and
+# started after companion/ last changed.
 # Needs what the README's quick start sets up: the database, Ollama, API key, npm installs.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -69,6 +70,23 @@ if listening "$CHAT_PORT"; then
   if [ "$running" != "$SCHEMA" ] || [ "$running_user" != "$USER_ID" ]; then
     echo "demo: a chat server on :$CHAT_PORT uses ${running:-unknown} as ${running_user:-unknown}, not $SCHEMA as $USER_ID." >&2
     echo "      Stop it, or pass --schema ${running:-...} --user-id ${running_user:-...}." >&2
+    exit 1
+  fi
+  # A server started before its code last changed serves old code (and old static files, like the
+  # floating chat's widget.js), so reusing it would hide what changed.
+  chat_pid=$(lsof -tiTCP:"$CHAT_PORT" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+  chat_age=$(ps -o etime= -p "$chat_pid" 2>/dev/null || true)  # [[dd-]hh:]mm:ss, on macOS and Linux
+  if [ -n "$chat_age" ] && python3 - "$chat_age" companion/src companion/pyproject.toml companion/uv.lock <<'PY'
+import os, sys, time
+days, _, clock = sys.argv[1].strip().rpartition("-")
+secs = int(days or 0) * 86400 + sum(int(p) * 60 ** i for i, p in enumerate(reversed(clock.split(":"))))
+paths = [os.path.join(root, f) for top in sys.argv[2:] for root, _, fs in os.walk(top) for f in fs
+         if "__pycache__" not in root] + [p for p in sys.argv[2:] if os.path.isfile(p)]
+sys.exit(0 if max(map(os.path.getmtime, paths)) > time.time() - secs + 2 else 1)  # 0: code is newer
+PY
+  then
+    echo "demo: the chat server on :$CHAT_PORT (pid $chat_pid) started before companion/ last changed, so it" >&2
+    echo "      serves old code. Stop it (kill $chat_pid) and run ./demo.sh again." >&2
     exit 1
   fi
   echo "demo: reusing the chat server on :$CHAT_PORT ($SCHEMA, user $USER_ID)"
