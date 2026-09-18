@@ -165,3 +165,16 @@ The order is chosen so daily use starts as soon as possible and the dashboard is
 - **`aim_demo.load_settings(user)`** reads `<USER>_PASSWORD`, so every script can target either schema.
 - **CLI passwords come from `MEMORY_INSPECTOR_DB_PASSWORD` or a prompt**, never an argument. `--grant-to` is validated as an Oracle identifier before being put into a GRANT.
 - **The library pins `oracleagentmemory>=26.6.0,<26.7`**, not `==`, because stage mapping depends on the log messages of that minor version. The demo still pins `==26.6.0`.
+
+### Step 2 (instrumentation)
+- **Checked against the real API first.** `add_messages` returns message ids, so `message_ids` is observed, not computed. `OracleThread` has its own `search`, `add_memory`, `update_memory`, `delete_memory` and `get_context_card`, all wrapped. Search results carry `record.record_type` and `record.thread_id`.
+- **Modules:** `stages.py` (message parsing plus rule table), `spans.py` (pairing, nesting, points folded into the enclosing span's `attrs.points`), `diff.py`, `runlog.py`, `inspector.py` (turns, log capture), `wrapper.py`. The plan's separate `runcontext.py` and `turns.py` live in `inspector.py`.
+- **The diff reads the package's `MEMORY` table, not `AIM_V_MEMORIES`.** That view belongs to the demo (`infra/sql`), and the library can't assume it exists. The table name comes from the client's private `_store._memory_table` (friction 03:45), with an override argument.
+- **Stage mapping** is 27 rules built from the captured fixture `inspector/tests/fixtures/turn_log.jsonl`. Generic operations (search, embedding, LLM calls) inherit the stage of the span they run inside, so the past-memory lookup's search is consolidation. `CLOSES_WITH` handles the context-summary span that never logs its end (friction 03:40). Closing a span also closes anything still open inside it.
+- **Turn close points:** `add_messages`, `delete_thread`, explicit `turn()` exit, and `close()`. `delete_thread` looks up the thread's owner *before* deleting, so its turn's diff lists everything the delete removed.
+- **Logging:** one shared handler on `oracleagentmemory` sets the logger to DEBUG, stops propagation, and re-dispatches records at or above the previously effective level to the root logger, so the host app's log output doesn't change. `close()` restores the logger.
+- **`AIM_V_MEMORY_RETRIEVALS` gained `search_no` and `thread_id`.** A turn can run several searches, and a result's thread shows whether it came from an earlier conversation.
+- **The failure hook is `MEMORY_INSPECTOR_FAIL_WRITES=1`**, not `AIM_RUNLOG_FAIL`, because it belongs to the library.
+- **Not instrumented:** the `*_async` methods (they pass through, with a one-time warning), `delete_user`, `delete_agent` and `update_thread` (they pass through silently). The "forget a user" story in M6 will need `delete_user`.
+- **Spike result:** LiteLLM callbacks can't see the package's LLM calls (friction 03:50). The `tokens` column stays empty for package spans.
+- **`agent/scripts/probe_inspector.py`** is the end-to-end check: two real turns, a correction and a thread delete on a throwaway user, then assertions on turn numbering, unmapped events and the delete diff. With `MEMORY_INSPECTOR_FAIL_WRITES=1` it confirms the agent finishes with nothing written. Rerun it after any package bump.

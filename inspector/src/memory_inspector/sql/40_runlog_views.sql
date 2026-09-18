@@ -22,23 +22,29 @@ SELECT event_id, run_id, turn, seq, parent_seq, depth, stage, name, source,
   FROM aim_run_events
 /
 
--- One row per search result per turn. Retrieval counts and "retrieved at
--- turn n" both come from here. in_prompt is 1/0 when the agent reported which
--- results it used (record_prompt), NULL when we only know search returned it.
+-- One row per search result per turn. Retrieval counts and "retrieved at turn
+-- n" both come from here. search_no counts the agent's searches within the
+-- turn; thread_id is the thread the result was stored under. in_prompt is 1/0
+-- when the agent reported which results it used (record_prompt), NULL when we
+-- only know search returned it.
 CREATE OR REPLACE VIEW aim_v_memory_retrievals AS
 SELECT t.run_id,
        t.turn,
        t.started_at,
+       jt.search_no,
        jt.rank,
        jt.record_id,
        jt.record_type,
        jt.distance,
+       jt.thread_id,
        CASE jt.in_prompt WHEN 'true' THEN 1 WHEN 'false' THEN 0 END AS in_prompt
   FROM aim_turns t,
        JSON_TABLE(t.retrieved, '$[*]'
-         COLUMNS (rank        NUMBER         PATH '$.rank',
+         COLUMNS (search_no   NUMBER         PATH '$.search',
+                  rank        NUMBER         PATH '$.rank',
                   record_id   VARCHAR2(128)  PATH '$.record_id',
                   record_type VARCHAR2(32)   PATH '$.record_type',
                   distance    NUMBER         PATH '$.distance',
+                  thread_id   VARCHAR2(128)  PATH '$.thread_id',
                   in_prompt   VARCHAR2(5)    PATH '$.in_prompt')) jt
 /
