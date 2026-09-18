@@ -96,7 +96,7 @@ Each check takes gathered inputs and verdicts and returns findings. No database,
 | `crowded_turn` | high | a recorded turn put stale, duplicate or transient memories into its prompt: at least one stale, or at least two wasted slots. **One finding per conversation**, naming the worst turn. | fix the linked findings, then ask again |
 | `orphan_chunks` | high | vectors whose memory or message no longer exists | find what deleted the source records outside the package |
 | `duplicate` | medium | the judge says a pair repeat each other. Pairs are merged into clusters, so three copies make one finding. The longest copy is kept. | delete the other copies |
-| `transient` | medium | the judge says conversation state, or a pattern match when there's no judge | delete it, and set `memory_extraction_custom_instructions` to stop new ones (the tested wording is included) |
+| `transient` | medium | the judge says conversation state, or a pattern match when there's no judge | delete it, and set `memory_extraction_custom_instructions` (through `MemoryExtractionConfig`) to stop new ones (the tested wording is included) |
 | `scope_mismatch` | low | memories labelled broader than one conversation but stored on a thread. **One finding per user.** | copy them to user level before deleting the thread |
 | `near_duplicate` | low | a close pair nobody classified: there was no judge, or the reply was unparsed | read both and decide |
 

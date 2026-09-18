@@ -18,12 +18,16 @@ TRANSIENT_PATTERN = re.compile(
 CORRECTION_PATTERN = re.compile(
     r"\b(correct(s|ed|ing|ion)|previously|no longer|instead of|changed (from|to)|updated from|replac(es|ed))\b", re.I)
 
-# Tested in agent/spikes/custom_instructions.py: removed every transient memory
-# in three trials. It cannot stop stale ones; extraction only appends.
+# Tested in agent/spikes/custom_instructions.py (--compare): over three trials with
+# a probe that repeats an unanswered question, 1 transient-looking memory against
+# 7 for the first wording, none about the assistant, and every correction still
+# says what it corrects. It cannot stop stale ones; extraction only appends.
 EXTRACTION_INSTRUCTIONS = (
     "Store only durable information: facts about the user, their systems and their work; their preferences; "
-    "and guidelines worth following next time. Never store what the assistant asked, is waiting for, or is about "
-    "to do, and never store the state of the conversation itself. When the user corrects something they said "
+    "and guidelines worth following next time. Never store what the assistant asked, said, is waiting for, or is "
+    "about to do, or what the assistant can or cannot do. Never store the state of the conversation itself: which "
+    "questions the user asked, how often, or whether they were answered. If a question shows a lasting interest, "
+    "store the interest, e.g. 'is evaluating Oracle AI Agent Memory'. When the user corrects something they said "
     "earlier, store the corrected fact and say what it corrects, e.g. 'bucket is in us-west-2 (corrects us-east-1)'."
 )
 
@@ -205,8 +209,9 @@ def check_transient(memories: list[Memory], verdicts: dict[str, Verdict | None])
             detail=("This records what was happening in one conversation, not something worth knowing in the next. "
                     "It will be retrieved in later sessions and can take a prompt slot."
                     + (" (Pattern match only; run with a judge model to confirm.)" if v is None else "")),
-            suggestion=("Delete it:\n" + _delete([m.id]) + "\n\nTo stop new ones, pass "
-                        "memory_extraction_custom_instructions when creating threads:\n" + EXTRACTION_INSTRUCTIONS),
+            suggestion=("Delete it:\n" + _delete([m.id]) + "\n\nTo stop new ones, create threads with "
+                        "memory_extraction_config=MemoryExtractionConfig(memory_extraction_custom_instructions=...), "
+                        "using this tested wording:\n" + EXTRACTION_INSTRUCTIONS),
             method=method, evidence=evidence))
     return out
 
