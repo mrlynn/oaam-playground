@@ -3,18 +3,20 @@
 #
 #   ./demo.sh                     your own conversations (schema aim_live)
 #   ./demo.sh --schema aim_app    the seeded demo data
+#   ./demo.sh --schema aim_app --user-id u_alice    chat as a seeded user
 #   ./demo.sh --port 3005         the front door on another port
 #
 # Starts three servers and stops them on Ctrl-C:
 #   :3000  the inspector (web/), which also serves /chat and /docs by proxy
 #   :8765  the companion's chat (companion/), writing to the chosen schema
 #   :3101  the docs site (site/), built with SITE_MODE=demo into site/build-demo
-# A chat server already running on its port is reused if it uses the same schema.
+# A chat server already running on its port is reused if it has the same schema and user.
 # Needs what the README's quick start sets up: the database, Ollama, API key, npm installs.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 SCHEMA=aim_live
+USER_ID=${COMPANION_USER_ID:-me}  # the memory user the chat talks as
 WEB_PORT=${PORT:-3000}
 CHAT_PORT=${COMPANION_PORT:-8765}
 DOCS_PORT=${DOCS_PORT:-3101}
@@ -22,7 +24,8 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --schema) SCHEMA=$2; shift 2 ;;
     --port) WEB_PORT=$2; shift 2 ;;
-    -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --user-id) USER_ID=$2; shift 2 ;;
+    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -58,17 +61,20 @@ if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
   exit 1
 fi
 
-# Chat. Reuse a running one only if it writes to the schema the inspector will read.
+# Chat. Reuse a running one only if it writes to the schema the inspector will read, as the same user.
 if listening "$CHAT_PORT"; then
-  running=$(curl -fsS "http://127.0.0.1:$CHAT_PORT/api/info" 2>/dev/null | sed -n 's/.*"db_user": *"\([^"]*\)".*/\1/p')
-  if [ "$running" != "$SCHEMA" ]; then
-    echo "demo: a chat server on :$CHAT_PORT uses '${running:-unknown}', not '$SCHEMA'. Stop it, or pass --schema ${running:-...}." >&2
+  info=$(curl -fsS "http://127.0.0.1:$CHAT_PORT/api/info" 2>/dev/null || true)
+  running=$(printf '%s' "$info" | sed -n 's/.*"db_user": *"\([^"]*\)".*/\1/p')
+  running_user=$(printf '%s' "$info" | sed -n 's/.*"user_id": *"\([^"]*\)".*/\1/p')
+  if [ "$running" != "$SCHEMA" ] || [ "$running_user" != "$USER_ID" ]; then
+    echo "demo: a chat server on :$CHAT_PORT uses ${running:-unknown} as ${running_user:-unknown}, not $SCHEMA as $USER_ID." >&2
+    echo "      Stop it, or pass --schema ${running:-...} --user-id ${running_user:-...}." >&2
     exit 1
   fi
-  echo "demo: reusing the chat server on :$CHAT_PORT ($SCHEMA)"
+  echo "demo: reusing the chat server on :$CHAT_PORT ($SCHEMA, user $USER_ID)"
 else
   (cd companion && COMPANION_DASHBOARD_URL="http://localhost:$WEB_PORT" \
-    exec uv run companion --web --db-user "$SCHEMA" --port "$CHAT_PORT") &
+    exec uv run companion --web --db-user "$SCHEMA" --user-id "$USER_ID" --port "$CHAT_PORT") &
   PIDS="$PIDS $!"
 fi
 
@@ -93,7 +99,7 @@ wait_for "$WEB_PORT" inspector
 curl -fsS -o /dev/null "http://localhost:$WEB_PORT/" 2>/dev/null || true  # first compile
 if ! kill -0 "$WEB_PID" 2>/dev/null; then echo "demo: the inspector stopped; see above" >&2; exit 1; fi
 echo
-echo "  Agent Memory Playground ($SCHEMA): http://localhost:$WEB_PORT"
+echo "  Agent Memory Playground ($SCHEMA, chatting as $USER_ID): http://localhost:$WEB_PORT"
 echo "  chat /chat · inspector /runs /memories · docs /docs    Ctrl-C stops everything"
 echo
 wait
