@@ -58,3 +58,9 @@ Clock started 2026-09-18 02:24 EDT (spec in hand, empty machine apart from Docke
 **2026-09-18 03:06 · Extractor scope vocabulary is open-ended.** Labels seen so far: `user`, `environment`, `multi_agent`. None of them change storage (every row gets `THREAD_ID`). The dashboard flags every mismatch in orange.
 
 **2026-09-18 03:08 · 26ai error code for missing DML privilege.** A DELETE through a SELECT-only grant raises `ORA-41900: missing DELETE privilege`, not the classic `ORA-01031`. Not a package issue, but any test that matches on 01031 will break on 26ai.
+
+**2026-09-18 03:20 · No way to list memories.** Planning the milestone 3 wrapper: to diff what a turn created or changed, you need the set of memories for a user or thread. The public API has `search` (ranked and capped, so not a listing) and nothing else. There is a private `_list_owned_thread_ids_for_actor`. The inspector will read its own view over `MEMORY` instead. Suggested fix: add `list_memories(user_id=, thread_id=, record_types=)`, which any memory admin UI needs.
+
+**2026-09-18 03:20 · LLM usage is not surfaced.** The package's `Llm.generate` returns `LlmResponse(text)` only. Extraction and summarization token spend, which is the real per-turn cost of memory, isn't visible to the caller. Suggested fix: include `usage` on `LlmResponse` and in the "LLM generation completed" log extras.
+
+**2026-09-18 03:20 · contextvars propagate into the worker thread (good).** Part of the package's work inside `add_messages` runs on an AnyIO worker thread, and a `ContextVar` set by the caller is visible there. That makes per-turn attribution of log records possible without patching anything. Worth documenting as the supported way to correlate.
