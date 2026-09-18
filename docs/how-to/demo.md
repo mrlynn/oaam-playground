@@ -28,10 +28,10 @@ This guide gets you from a cold laptop to a demo that lands. There are three len
    uv run python scripts/seed.py --reset && uv run python scripts/apply_sql.py
    ```
 
-4. **Start the demo** on the seeded data. The chat, the inspector and the docs come up together at `http://localhost:3000`, all reading `aim_app`.
+4. **Start the demo** on the seeded data, chatting as Alice. The chat, the inspector and the docs come up together at `http://localhost:3000`, all on `aim_app`.
 
    ```bash
-   ./demo.sh --schema aim_app
+   ./demo.sh --schema aim_app --user-id u_alice
    ```
 
 5. **Print today's links** and read the `->` lines. They say whether each demo moment reproduced in this seed.
@@ -119,7 +119,7 @@ The 5-minute spine, plus four extensions. Pick the ones that fit the audience.
 
 ### C. One line to instrument, in a real agent (+3 min)
 
-**Show:** the companion in a terminal. Use the seed user, not your real data:
+**Show:** the companion. In the browser, that's **Chat** in the demo's header (started with `--user-id u_alice` in step 4). In a terminal, use the seed user, not your real data:
 
 ```bash
 cd companion

@@ -43,7 +43,7 @@ npm install && (cd ../site && npm install) && (cd ../companion && uv sync)
 cd .. && ./demo.sh --schema aim_app     # http://localhost:3000: chat, inspector and docs
 ```
 
-`./demo.sh` starts the chat, the inspector and the docs site together and puts them behind one URL and one header. `--schema aim_app` shows the seeded data; with no option it uses `aim_live`, your own conversations. Ctrl-C stops all three.
+`./demo.sh` starts the chat, the inspector and the docs site together and puts them behind one URL and one header. `--schema aim_app` shows the seeded data (add `--user-id u_alice` to chat as a seeded user); with no option it uses `aim_live`, your own conversations. Ctrl-C stops all three.
 
 Then run `uv run python scripts/demo_links.py` from `agent/` to get links straight to the interesting turns. The [first-run tutorial](docs/tutorial/first-run.md) walks the same path with what you should see at each step.
 
