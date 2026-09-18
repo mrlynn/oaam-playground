@@ -114,6 +114,9 @@
   const msgs = $("msgs"), log = $("log"), input = $("input"), send = $("send");
   const whyBtn = $("whyBtn"), newBtn = $("newBtn"), aside = $("why"), modelSel = $("model");
   let info = null, sid = null, thread = null, busy = false, lastStatus = null, model = null, models = [];
+  let leaving = false;  // a turn's fetch is cut off when the page unloads; that isn't a failure
+  addEventListener("pagehide", () => { leaving = true; });
+  addEventListener("pageshow", () => { leaving = false; });
   const MODEL_KEY = "companion.model";
   const store = {
     get() { try { return localStorage.getItem(MODEL_KEY); } catch { return null; } },
@@ -294,6 +297,10 @@
         }
       }
     } catch (e) {
+      // Leaving the page cuts the turn's fetch off, sometimes before pagehide. Wait a moment: if the
+      // page is going away this never resumes, and the saved pending mark lets the next page pick the reply up.
+      await new Promise((r) => setTimeout(r, 400));
+      if (leaving) return;
       pending.remove();
       add("error", null, e.message);
     }
@@ -330,7 +337,7 @@
   async function resume(prev) {
     // The server keeps sessions in memory, so after a restart this starts over.
     if (!prev || !prev.sid) return false;
-    let s;
+    let s, wait = null;
     try { s = await (await api(`/api/sessions/${prev.sid}`)).json(); } catch { return false; }
     sid = prev.sid; thread = s.thread_id; model = s.model; modelSel.value = model;
     msgs.innerHTML = prev.log || "";
@@ -344,13 +351,35 @@
         const st = el("div", "status", "finished while you were away; see Runs for what it remembered");
         r.append(st);
       } else {
-        add("note", null, "You left before the reply arrived. It's still being written: reload in a moment.");
+        wait = add("note", null, "the reply is still being written…");
+        wait.querySelector(".text").classList.add("pending");
+        wait._asked = asked;
       }
     }
     const why = [...msgs.querySelectorAll(".status button.link")].pop();
     if (why) { why.onclick = showWhy; lastStatus = why.parentNode; lastStatus._why = why; whyBtn.disabled = false; }
     setMeta(); scroll();
+    if (wait) await waitForReply(wait);
     return true;
+  }
+
+  // Left mid-turn and came back before the server finished it: poll until the reply is there.
+  async function waitForReply(note) {
+    for (let i = 0; i < 80; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      let s;
+      try { s = await (await api(`/api/sessions/${sid}`)).json(); } catch { break; }
+      if (s.last && s.last.user_message === note._asked) {
+        note.remove();
+        add("assistant", "companion", s.last.text)
+          .append(el("div", "status", "finished while you were away; see Runs for what it remembered"));
+        return;
+      }
+    }
+    const t = note.querySelector(".text");
+    t.classList.remove("pending");
+    t.textContent = "The reply didn't come back. Check Runs, or reload.";
+    save();
   }
 
   function closeWhy() { aside.classList.remove("open"); aside.replaceChildren(); }
