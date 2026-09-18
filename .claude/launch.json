@@ -12,6 +12,20 @@
       ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "site",
+        "run",
+        "serve",
+        "--",
+        "--no-open"
+      ],
+      "port": 3100,
+      "url": "http://localhost:3100"
     }
   ]
 }

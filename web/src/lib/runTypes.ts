@@ -1,6 +1,51 @@
-// Shapes of the memory-inspector run log views (AIM_V_RUNS, AIM_V_TURNS).
-// JSON columns arrive as parsed values. Types only, so both server code and
-// the node --test suite can import this file.
+// Shapes of the AIM_V_* view rows. JSON columns arrive as parsed values.
+// Types only, so server code, the node --test suite and the docs site's
+// replay can all import this file.
+
+// ---- demo views over the package (infra/sql/10_views.sql) ---------------------
+
+export type ThreadRow = {
+  thread_id: string;
+  user_id: string | null;
+  agent_id: string | null;
+  created_at: Date;
+  message_count: number;
+  memory_count: number;
+  last_activity: Date;
+};
+
+export type MessageRow = {
+  message_id: string;
+  thread_id: string;
+  position: number;
+  role: string;
+  content: string | null;
+  created_at: Date;
+  expires_at: Date | null;
+  is_expired: number;
+};
+
+export type MemoryType = "memory" | "fact" | "preference" | "guideline";
+
+export type MemoryRow = {
+  memory_id: string;
+  memory_type: MemoryType;
+  content: string | null;
+  thread_id: string | null;
+  user_id: string | null;
+  agent_id: string | null;
+  created_at: Date;
+  expires_at: Date | null;
+  is_expired: number;
+  origin: "extracted" | "explicit";
+  extractor_scope: string | null;
+  importance: number | null;
+  entities: string[] | null;
+  extraction_id: string | null;
+  after_message_position: number;
+};
+
+// ---- run log (memory-inspector) ------------------------------------------------
 
 export type RunRow = {
   run_id: string;

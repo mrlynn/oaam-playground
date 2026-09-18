@@ -8,6 +8,7 @@ import Link from "next/link";
 import HintChip from "@/components/HintChip";
 import type { MemoryAt } from "@/lib/memoryState";
 import { promptLabel } from "@/lib/memoryState";
+import { fmtDistance } from "@/lib/format";
 import { memoryTypeColor } from "@/lib/memoryTypes";
 
 type Props = {
@@ -104,8 +105,4 @@ export default function MemoryStateCard({ memory: m, turn, turnHref }: Props) {
       </Box>
     </Paper>
   );
-}
-
-export function fmtDistance(d: number | null | undefined): string {
-  return d == null ? "—" : d.toFixed(3);
 }

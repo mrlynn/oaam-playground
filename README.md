@@ -16,6 +16,7 @@ It's a personal work sample, built to learn the package. It's not an Oracle prod
 | `labs/` | **Three Jupyter labs** on one loop: look, find, fix, check again. |
 | `agent/` | Seed data, setup scripts, and the spikes the design depends on. |
 | `infra/` | Oracle AI Database 26ai Free in Docker, plus the demo views. |
+| `site/` | **A docs site** over `docs/`, with a replay of the seeded demo that runs in the browser. No database needed: `cd site && npm install && npm start`. |
 | `docs/` | Everything else. Start at [docs/README.md](docs/README.md). |
 
 The health check finds stale memories that a correction never replaced, contradictions, duplicates, conversation state stored as if it were a durable fact, and the turns where those crowded real memories out of the prompt. It uses SQL vector distance to find candidates and an LLM judge to decide.
@@ -65,6 +66,7 @@ cd ../companion && uv sync && uv run companion
 cd inspector && uv run pytest -q
 cd companion && uv run pytest -q
 cd web && npm test
+cd site && npm test
 ```
 
 ## License

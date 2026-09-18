@@ -5,8 +5,7 @@
 // No runtime imports: tests/memoryState.test.mjs runs this file under plain
 // `node --test`.
 
-import type { MemoryRow } from "./queries";
-import type { Retrieval, TurnRow } from "./runTypes";
+import type { MemoryRow, Retrieval, TurnRow } from "./runTypes";
 
 export type Revision = { turn: number; before: string | null; after: string | null };
 

@@ -116,13 +116,32 @@ uv run jupyter nbconvert --to notebook --execute lab3_retrieval_quality.ipynb --
 ```bash
 cd inspector && uv run pytest -q      # 76: stages and spans (captured fixture), turns, diff, health checks, judge
 cd companion && uv run pytest -q      # 11: prompt assembly, token counting, /why
-cd web && npm test                    # 23: memory state, findings, lifecycle
+cd web && npm test                    # 25: memory state, "why" rows, findings, lifecycle
 cd web && npm run lint && npm run build
+cd site && npm test                   # 5: the committed export through the shared logic
+cd site && npm run typecheck && npm run build   # the build fails on any broken link or anchor
 ```
+
+## Docs site (`site/`)
+
+A Docusaurus site over `docs/`, read in place, plus a replay of the seeded demo that runs in the browser with no database.
+
+```bash
+cd site && npm install
+npm start                             # http://localhost:3100/oaam-playground/, live reload (3000 is the dashboard's)
+npm run build && npm run serve        # the production build
+```
+
+| command | what it does |
+|---|---|
+| `cd web && npm run export-demo` | Exports the seeded demo from `AIM_APP` (as `aim_web`, through the views) to `site/src/data/demo.json`. Refuses any other schema. Writes nothing if a demo moment didn't reproduce. |
+| `cd site && npm test` | Runs the committed export through the dashboard's pure logic. |
+
+`.github/workflows/site.yml` builds and tests the site on every push that touches `docs/`, `site/` or `web/src/lib/`. It deploys to GitHub Pages only when the repo variable `PAGES_ENABLED` is `true`.
 
 ## Dev server in this repo
 
-`.claude/launch.json` defines `web` (`npm --prefix web run dev`, `autoPort: true`). Next 16 refuses a second `next dev` in the same directory, so stop any other session's server first.
+`.claude/launch.json` defines `web` (`npm --prefix web run dev`, `autoPort: true`) and `site` (the built docs site on port 3100). Next 16 refuses a second `next dev` in the same directory, so stop any other session's server first.
 
 ## Related
 

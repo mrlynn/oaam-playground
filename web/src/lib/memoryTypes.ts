@@ -1,4 +1,4 @@
-import type { MemoryType } from "./queries";
+import type { MemoryType } from "./runTypes";
 
 // One hue per memory type. Mid-tones so they read on light and dark backgrounds.
 export const MEMORY_TYPE_COLOR: Record<MemoryType, string> = {

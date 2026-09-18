@@ -5,24 +5,13 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Link from "next/link";
 
-import { type FindingStatus } from "@/lib/findings";
+import { type FindingStatus, KIND_LABEL, crowdedLabel, evidenceLines, memoryRole, methodLabel } from "@/lib/findings";
 import { shortId } from "@/lib/format";
 import { memoryTypeColor } from "@/lib/memoryTypes";
 import type { MemoryRow } from "@/lib/queries";
 import type { FindingRow, MemoryOrigin } from "@/lib/runTypes";
 
 export const SEVERITY_COLOR = { high: "error", medium: "warning", low: "default" } as const;
-
-const KIND_LABEL: Record<FindingRow["kind"], string> = {
-  superseded: "superseded",
-  contradiction: "contradiction",
-  duplicate: "duplicate",
-  near_duplicate: "near-duplicate",
-  transient: "transient",
-  crowded_turn: "crowded prompt",
-  scope_mismatch: "scope mismatch",
-  orphan_chunks: "orphan chunks",
-};
 
 const MAX_MEMORIES = 6;
 
@@ -35,11 +24,7 @@ type Props = {
 
 /** One health finding: what is wrong, the evidence, and the fix. */
 export default function FindingCard({ finding: f, status, memories, origins }: Props) {
-  const ev = f.evidence ?? {};
   const ids = f.kind === "orphan_chunks" ? [] : (f.memory_ids ?? []);
-  const supersededBy = new Set(((ev.superseded_by as { id: string }[] | undefined) ?? []).map((s) => s.id));
-  const role = (id: string): string | null =>
-    ev.stale === id ? "stale" : ev.current === id || supersededBy.has(id) ? "current" : ev.keep === id ? "keep" : null;
 
   return (
     <Paper id={`finding-${f.finding_id}`} sx={{ p: 2, scrollMarginTop: 80, "&:target": { outline: 2, outlineColor: "primary.main" } }}>
@@ -67,8 +52,8 @@ export default function FindingCard({ finding: f, status, memories, origins }: P
           {ids.slice(0, MAX_MEMORIES).map((id) => {
             const m = memories.get(id);
             const o = origins.get(id);
-            const r = role(id);
-            const wasted = crowdedLabel(ev, id);
+            const r = memoryRole(f, id);
+            const wasted = crowdedLabel(f, id);
             return (
               <Box key={id} sx={{ pl: 1.25, borderLeft: 3, borderColor: m ? memoryTypeColor(m.memory_type) : "divider" }}>
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 0.5 }}>
@@ -129,45 +114,9 @@ export default function FindingCard({ finding: f, status, memories, origins }: P
   );
 }
 
-function methodLabel(method: string): string {
-  return method
-    .replace("sql", "SQL")
-    .replace("llm", "LLM judgment")
-    .replace("pattern", "text pattern")
-    .replaceAll("+", " + ");
-}
-
-function crowdedLabel(ev: Record<string, unknown>, id: string): string | null {
-  const turns = ev.turns as { wasted?: Record<string, string> }[] | undefined;
-  const labels = new Set((turns ?? []).map((t) => t.wasted?.[id]).filter(Boolean));
-  return labels.size ? `${[...labels].join(", ")} in prompt` : null;
-}
-
-type Judge = { relation?: string; kind?: string; rationale?: string; model?: string; current?: string | null };
-
 /** Distances, patterns and judge rationales, labelled for what they are. */
 function Evidence({ finding: f }: { finding: FindingRow }) {
-  const ev = (f.evidence ?? {}) as Record<string, unknown>;
-  const lines: { label: string; text: string }[] = [];
-  if (typeof ev.distance === "number") lines.push({ label: "cosine distance", text: ev.distance.toFixed(3) });
-  if (typeof ev.pattern === "string") lines.push({ label: "matched text", text: `“${ev.pattern}”` });
-  const judge = ev.judge as Judge | null | undefined;
-  if (judge?.rationale) {
-    lines.push({ label: `LLM judgment · ${judge.model ?? "model"}`, text: `${judge.relation ?? judge.kind}: ${judge.rationale}` });
-  }
-  const pairs = ev.pairs as { distance: number; rationale: string; model: string }[] | undefined;
-  for (const p of pairs ?? []) {
-    lines.push({ label: `LLM judgment · ${p.model} · distance ${p.distance.toFixed(3)}`, text: p.rationale });
-  }
-  if (f.kind === "scope_mismatch" && ev.labels) {
-    lines.push({ label: "extractor labels", text: Object.entries(ev.labels as Record<string, number>).map(([k, n]) => `${k} × ${n}`).join(", ") });
-  }
-  if (f.kind === "crowded_turn" && Array.isArray(ev.turns)) {
-    for (const t of ev.turns as { turn: number; wasted: Record<string, string>; slots: number }[]) {
-      lines.push({ label: `turn ${t.turn}`, text: `${Object.keys(t.wasted).length} of ${t.slots} slots: ${Object.values(t.wasted).join(", ")}` });
-    }
-    if (ev.basis === "returned") lines.push({ label: "note", text: "the agent didn't report its prompt; counted everything search returned" });
-  }
+  const lines = evidenceLines(f);
   if (!lines.length) return null;
   return (
     <Box component="dl" sx={{ m: 0, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "max-content 1fr" }, columnGap: 1.5, rowGap: 0.25 }}>

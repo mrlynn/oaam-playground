@@ -13,3 +13,7 @@ export function formatDateTime(d: Date | null | undefined): string {
 export function shortId(id: string | null | undefined): string {
   return id ? id.slice(0, 8) : "—";
 }
+
+export function fmtDistance(d: number | null | undefined): string {
+  return d == null ? "—" : d.toFixed(3);
+}

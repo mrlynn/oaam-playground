@@ -7,8 +7,11 @@ import type {
   FindingRow,
   FindingStub,
   MemoryOrigin,
+  MemoryRow,
+  MessageRow,
   RetrievalStat,
   RunRow,
+  ThreadRow,
   TurnPrompt,
   TurnRow,
 } from "./runTypes";
@@ -18,47 +21,6 @@ export type StoreInfo = {
   vector_dim: string | null;
   indexing_mode: string | null;
   retention_config: string | null;
-};
-
-export type ThreadRow = {
-  thread_id: string;
-  user_id: string | null;
-  agent_id: string | null;
-  created_at: Date;
-  message_count: number;
-  memory_count: number;
-  last_activity: Date;
-};
-
-export type MessageRow = {
-  message_id: string;
-  thread_id: string;
-  position: number;
-  role: string;
-  content: string | null;
-  created_at: Date;
-  expires_at: Date | null;
-  is_expired: number;
-};
-
-export type MemoryType = "memory" | "fact" | "preference" | "guideline";
-
-export type MemoryRow = {
-  memory_id: string;
-  memory_type: MemoryType;
-  content: string | null;
-  thread_id: string | null;
-  user_id: string | null;
-  agent_id: string | null;
-  created_at: Date;
-  expires_at: Date | null;
-  is_expired: number;
-  origin: "extracted" | "explicit";
-  extractor_scope: string | null;
-  importance: number | null;
-  entities: string[] | null;
-  extraction_id: string | null;
-  after_message_position: number;
 };
 
 export async function getStoreInfo(): Promise<StoreInfo | null> {
@@ -119,7 +81,7 @@ export function getThreadMemories(
 
 // ---- run log (memory-inspector) --------------------------------------------
 
-export type { CheckRunRow, EventRow, FindingRow, FindingStub, MemoryOrigin, RetrievalStat, RunRow, TurnPrompt, TurnRow } from "./runTypes";
+export type { CheckRunRow, EventRow, FindingRow, FindingStub, MemoryOrigin, MemoryRow, MemoryType, MessageRow, RetrievalStat, RunRow, ThreadRow, TurnPrompt, TurnRow } from "./runTypes";
 
 /** `:p0, :p1, ...` placeholders and binds for an IN list. */
 function inList(prefix: string, values: string[]): { sql: string; binds: Record<string, string> } {

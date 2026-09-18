@@ -1,7 +1,13 @@
 // Waterfall layout and per-stage totals for one turn's events. Pure, no runtime
 // imports: tests/lifecycle.test.mjs runs it under plain `node --test`.
 
-import type { EventRow, Stage } from "./runTypes";
+import type { EventRow, Stage, TurnRow } from "./runTypes";
+
+// A typical add_messages turn is about 30 spans, and its story (summary call,
+// past-memory lookup, extraction call, store write) sits 3-4 levels down, so
+// show everything unless the turn is unusually large.
+export const SHOW_ALL_UP_TO = 40;
+export const COLLAPSED_DEPTH = 3;
 
 export type Bar = EventRow & {
   /** Offset from the turn's first event, ms. */
@@ -73,4 +79,58 @@ export function sumPointExtras(events: EventRow[], field: string): number {
 
 export function parseTurnParam(raw: string): number | null {
   return /^[1-9]\d*$/.test(raw) ? Number(raw) : null;
+}
+
+/** What each stage produced this turn, from the turn row and the spans' own records. */
+export function producedBy(stage: Stage, turn: TurnRow, events: EventRow[]): string[] {
+  const diff = turn.memory_diff;
+  const inStage = events.filter((e) => e.stage === stage);
+  switch (stage) {
+    case "retrieval": {
+      const r = turn.retrieved ?? [];
+      const searches = new Set(r.map((x) => x.search)).size;
+      const best = [...r].sort((a, b) => (a.distance ?? 1) - (b.distance ?? 1))[0];
+      return [
+        `${searches} agent search${searches === 1 ? "" : "es"}, ${r.length} results, ${r.filter((x) => x.in_prompt).length} into the prompt`,
+        ...(best ? [`closest: ${best.record_type} at cosine ${best.distance?.toFixed(3)}`] : []),
+      ];
+    }
+    case "extraction": {
+      const created = diff?.created ?? [];
+      return [
+        `${created.length} created · ${diff?.updated?.length ?? 0} updated · ${diff?.deleted?.length ?? 0} deleted`,
+        ...created.slice(0, 3).map((m) => `+ [${m.type}] ${m.content ?? ""}`),
+        ...(created.length > 3 ? [`and ${created.length - 3} more`] : []),
+      ];
+    }
+    case "ingestion":
+      return [
+        `${turn.message_ids?.length ?? 0} messages written`,
+        `${sumPointExtras(inStage, "inserted_row_count")} chunks embedded and inserted`,
+      ];
+    case "consolidation": {
+      const looked = inStage.map((e) => (e.attrs?.end as Record<string, unknown> | undefined)?.past_memory_count)
+        .filter((x): x is number => typeof x === "number");
+      return [
+        looked.length ? `looked up ${looked.reduce((a, b) => a + b, 0)} past memories before extracting` : "past-memory lookup before extracting",
+        ...(diff?.updated?.length ? [] : ["no earlier memory was revised this turn"]),
+      ];
+    }
+    case "summarization":
+      return ["context summary updated for the next extraction (one LLM call; tokens not reported)"];
+    case "revision":
+      return [`${diff?.deleted?.length ?? 0} memories deleted · ${diff?.updated?.length ?? 0} updated`];
+    default:
+      return ["setup: thread and client initialization"];
+  }
+}
+
+/** A span's duration as the waterfall prints it. */
+export function fmtSpanMs(ms: number | null): string {
+  return ms == null ? "—" : ms < 10 ? `${ms.toFixed(1)} ms` : `${Math.round(ms)} ms`;
+}
+
+/** Drawn dashed: the package logged no end, so the end was inferred. */
+export function endInferred(e: EventRow): boolean {
+  return Boolean(e.attrs?.end_inferred || e.attrs?.unclosed);
 }

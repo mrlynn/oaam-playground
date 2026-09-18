@@ -23,6 +23,16 @@ Extraction is an LLM, so the memories differ each time. Nothing downstream depen
 
 To add conversations without resetting, run `seed.py` without `--reset`. It appends threads and runs a new check.
 
+### Refresh the docs site's replay
+
+The site in `site/` replays a recorded export of the seed, not the database. After a reseed it still shows the old one, so export again and commit the file:
+
+```bash
+cd web && npm run export-demo   # reads AIM_APP as aim_web, writes site/src/data/demo.json
+```
+
+It checks the demo moments first and writes nothing if one didn't reproduce in this seed. It only ever reads `AIM_APP`: real conversations in `aim_live` never go into the export.
+
 ## Use your real data
 
 The companion writes to `aim_live` by default.
@@ -83,7 +93,8 @@ After editing a prompt in `inspector/src/memory_inspector/health/judge.py`, or c
 ```bash
 cd inspector && uv run pytest -q          # 76
 cd companion && uv run pytest -q          # 11
-cd web && npm test && npm run lint && npm run build     # 23 tests
+cd web && npm test && npm run lint && npm run build     # 25 tests
+cd site && npm test && npm run typecheck && npm run build   # 5 tests, then the site
 ```
 
 Only the probe and the spikes touch the database and models. Every unit test runs offline.

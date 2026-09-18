@@ -90,6 +90,7 @@ The dashboard reads `aim_app` by default. Set `AIM_SCHEMA=AIM_LIVE` in `web/.env
 | `agent/` | demo config (`aim_demo`), seed/smoke/probe/check scripts, schema dumper, spikes |
 | `labs/` | labs 1–3 as Jupyter notebooks, and `labkit.py`. See [its README](../labs/README.md) |
 | `web/` | Next.js dashboard: runs, turn scrubber and "why", lifecycle, memory health |
+| `site/` | Docusaurus site over `docs/`, with a replay of the seeded demo that runs without a database |
 | `docs/` | schema snapshot, phase 0 answers, [friction log and five fixes](friction.md), [token method](token-method.md), milestone plans |
 
 ## Database users

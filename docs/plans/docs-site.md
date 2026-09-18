@@ -1,4 +1,4 @@
-# Milestone 5 plan: a public docs site with a replay you can click
+# Docs site plan: a public site with a replay you can click
 
 2026-09-18. Builds on milestone 4 (`492021c` docs, `f49dc68` README). Not started. It waits on the one open M4 item (see "Before this starts").
 
@@ -133,3 +133,34 @@ About a day of Claude Code time: an hour for the export, an hour for scaffolding
 2. Which conversation opens the landing page? The default is `support_03`, where one "why" pane shows a transient, a stale and a near-duplicate memory crowding out the contact preference. `support_01` is simpler: one correction, one stale fact.
 3. The default `mrlynn.github.io/oaam-playground` address, or a custom domain?
 4. Retire the 11 published artifact pages once the site is live, or keep them as private share copies?
+
+## As built
+
+2026-09-18. Steps 1 to 4 are built, step 5 builds and tests but doesn't deploy, and step 6 is done. The `aim_live` check from "Before this starts" hasn't happened. Nothing is published, so no claim has gone out ahead of it.
+
+### What changed from the plan
+
+| plan | as built | why |
+|---|---|---|
+| Called milestone 5 | Renamed to this docs-site plan, off the milestone track | M5 was already the cost view and labs 4 and 5 (`docs/token-method.md`, the M3 and M4 plans). |
+| Exporter in Python, `agent/scripts/export_demo.py` | Node, `web/scripts/export-demo.mts`, run with `npm run export-demo` | python-oracledb in thin mode can't read the run log's named time zones (DPY-3022). node-oracledb reads them, and it decodes every row exactly the way the dashboard does. |
+| Reuse `demo_links.py`'s checks | `checkMoments()` in `web/src/lib/demoExport.ts` | `demo_links.py` reads base tables as the schema owner. The export reads views as `aim_web`, so the checks run on the exported rows instead, and the site test runs the same function on the committed file. |
+| Move `MemoryRow` and `MemoryType` | Moved all four view row types (`ThreadRow`, `MessageRow`, `MemoryRow`, `MemoryType`) into `runTypes.ts` | The replay needs threads and messages too. |
+| Share the logic that was already pure | Also pulled the logic out of three MUI files: the "why" rows (`why.ts`), what each stage produced and the span formatting (`lifecycle.ts`), and finding labels, roles and evidence lines (`findings.ts`) | Otherwise the replay would have had its own copy of the "why" pane's rules, which is exactly the drift this plan exists to prevent. The dashboard now calls the same functions. |
+| Landing and replay pages in `.mdx` | `.tsx` | Both are mostly state and layout. Neither has prose that benefits from MDX. |
+| `Lifecycle` beside the replay | A third tab in the replay: memory, why, lifecycle | One place to step turns for all three views. |
+| Deploy on push | Build and test on push. Deploy only when the repo variable `PAGES_ENABLED` is `true`. | Open question 1 isn't answered, and a deploy job against a private repo would fail every push. |
+
+### Checked
+
+- **Export:** `npm run export-demo` finds all five moments in the current seed and writes 407 KB (4 conversations, 13 turns, 369 events, 32 memories, 17 findings). The support_03 prompt has 2 of its 5 slots badged (stale, transient). `--schema aim_live` exits 1 and writes nothing. The file holds only `u_alice` and `u_bob`, and a scan found no keys, passwords or real names.
+- **Replay against the dashboard:** at support_03 turn 1, support_01 turn 2 and support_01 turn 3, the "why" rows match the running dashboard row for row: rank, type, distance, prompt label and badges. The memory view at support_01 turn 3 matches card for card.
+- **Links:** the build passes with `onBrokenLinks`, `onBrokenAnchors` and broken markdown links all set to throw. The six links out of `docs/` go to GitHub.
+- **Layout:** no horizontal scroll at 375 px, dark mode follows the system, ← and → step turns, and a cross-conversation link from the landing page opens `/replay` at that conversation and turn.
+- **Tests:** web 25 (2 new, for `why.ts`) and site 5, plus lint, `tsc` and `next build` for the dashboard. The dashboard's pages render the same after the refactor.
+
+## Still open
+
+1. The `aim_live` check, before anything is published.
+2. Open questions 1 to 4 above. Deploying needs question 1: make the repo public, turn on Pages with "GitHub Actions" as the source, then set `PAGES_ENABLED=true`.
+3. Screenshots in `docs/` are still the M2 thread view. The replay makes most of them unnecessary on the site, but the GitHub README still uses one.

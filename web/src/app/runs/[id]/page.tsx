@@ -3,10 +3,9 @@ import { notFound } from "next/navigation";
 
 import ThreadView from "@/components/ThreadView";
 import RunView from "@/components/run/RunView";
-import type { WhyRow } from "@/components/run/WhyPanel";
 import { shortId } from "@/lib/format";
-import { badgesByMemory } from "@/lib/findings";
 import { memoryStateAt, parseTurn, turnByMessage } from "@/lib/memoryState";
+import { type WhyRow, sortedRetrievals, whyRows as buildWhyRows } from "@/lib/why";
 import {
   getLatestFindings,
   getMemoriesByIds,
@@ -50,9 +49,8 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
   let whyRows: WhyRow[] = [];
   let prompt = null;
   if (view === "why") {
-    const retrieved = [...(turns.find((t) => t.turn === turn)?.retrieved ?? [])].sort(
-      (a, b) => a.search - b.search || a.rank - b.rank,
-    );
+    const current = turns.find((t) => t.turn === turn);
+    const retrieved = sortedRetrievals(current);
     const ids = [...new Set(retrieved.map((r) => r.record_id))];
     const [rows, msgs, origins, p, findings] = await Promise.all([
       getMemoriesByIds(ids),
@@ -61,25 +59,8 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
       getTurnPrompt(id, turn),
       getLatestFindings(),
     ]);
-    const badges = badgesByMemory(findings);
     prompt = p;
-    const asOfTurn = new Map(state.map((m) => [m.id, m]));
-    const current = new Map(rows.map((m) => [m.memory_id, m]));
-    const messageById = new Map(msgs.map((m) => [m.message_id, m]));
-    const originOf = new Map(origins.map((o) => [o.memory_id, { runId: o.run_id, turn: o.turn }]));
-    whyRows = retrieved.map((r) => {
-      const known = asOfTurn.get(r.record_id);
-      const row = current.get(r.record_id);
-      const msg = messageById.get(r.record_id);
-      return {
-        ...r,
-        content: known?.content ?? row?.content ?? msg?.content ?? null,
-        origin: originOf.get(r.record_id) ?? null,
-        storedThread: row?.thread_id ?? msg?.thread_id ?? r.thread_id,
-        gone: !row && !msg,
-        badges: badges.get(r.record_id) ?? [],
-      };
-    });
+    whyRows = buildWhyRows({ turn: current, state, memories: rows, messages: msgs, origins, findings });
   }
 
   return (

@@ -2,8 +2,7 @@
 // badges per memory, and per-memory stats. No runtime imports, so
 // tests/findings.test.mjs runs this file under plain `node --test`.
 
-import type { MemoryRow } from "./queries";
-import type { FindingRow, FindingStub, MemoryOrigin, RetrievalStat } from "./runTypes";
+import type { FindingRow, FindingStub, MemoryOrigin, MemoryRow, RetrievalStat } from "./runTypes";
 
 export type FindingStatus = "new" | "open";
 
@@ -114,4 +113,70 @@ export function memoryStats(
 export function parseSort(raw: string | string[] | undefined): SortKey {
   const v = Array.isArray(raw) ? raw[0] : raw;
   return v === "created" || v === "findings" ? v : "retrieved";
+}
+
+// ---- how a finding reads (the /memories card and the docs site's replay) ------
+
+export const KIND_LABEL: Record<FindingRow["kind"], string> = {
+  superseded: "superseded",
+  contradiction: "contradiction",
+  duplicate: "duplicate",
+  near_duplicate: "near-duplicate",
+  transient: "transient",
+  crowded_turn: "crowded prompt",
+  scope_mismatch: "scope mismatch",
+  orphan_chunks: "orphan chunks",
+};
+
+export function methodLabel(method: string): string {
+  return method
+    .replace("sql", "SQL")
+    .replace("llm", "LLM judgment")
+    .replace("pattern", "text pattern")
+    .replaceAll("+", " + ");
+}
+
+/** The memory's part in the finding: the stale side, the current side, or the copy to keep. */
+export function memoryRole(f: FindingRow, id: string): "stale" | "current" | "keep" | null {
+  const ev = f.evidence ?? {};
+  const supersededBy = new Set(((ev.superseded_by as { id: string }[] | undefined) ?? []).map((s) => s.id));
+  if (ev.stale === id) return "stale";
+  if (ev.current === id || supersededBy.has(id)) return "current";
+  if (ev.keep === id) return "keep";
+  return null;
+}
+
+/** For a crowded prompt: what this memory was doing in the prompt, e.g. "stale in prompt". */
+export function crowdedLabel(f: FindingRow, id: string): string | null {
+  const turns = (f.evidence ?? {}).turns as { wasted?: Record<string, string> }[] | undefined;
+  const labels = new Set((turns ?? []).map((t) => t.wasted?.[id]).filter(Boolean));
+  return labels.size ? `${[...labels].join(", ")} in prompt` : null;
+}
+
+type Judge = { relation?: string; kind?: string; rationale?: string; model?: string; current?: string | null };
+
+/** Distances, patterns and judge rationales, labelled for what they are. */
+export function evidenceLines(f: FindingRow): { label: string; text: string }[] {
+  const ev = (f.evidence ?? {}) as Record<string, unknown>;
+  const lines: { label: string; text: string }[] = [];
+  if (typeof ev.distance === "number") lines.push({ label: "cosine distance", text: ev.distance.toFixed(3) });
+  if (typeof ev.pattern === "string") lines.push({ label: "matched text", text: `“${ev.pattern}”` });
+  const judge = ev.judge as Judge | null | undefined;
+  if (judge?.rationale) {
+    lines.push({ label: `LLM judgment · ${judge.model ?? "model"}`, text: `${judge.relation ?? judge.kind}: ${judge.rationale}` });
+  }
+  const pairs = ev.pairs as { distance: number; rationale: string; model: string }[] | undefined;
+  for (const p of pairs ?? []) {
+    lines.push({ label: `LLM judgment · ${p.model} · distance ${p.distance.toFixed(3)}`, text: p.rationale });
+  }
+  if (f.kind === "scope_mismatch" && ev.labels) {
+    lines.push({ label: "extractor labels", text: Object.entries(ev.labels as Record<string, number>).map(([k, n]) => `${k} × ${n}`).join(", ") });
+  }
+  if (f.kind === "crowded_turn" && Array.isArray(ev.turns)) {
+    for (const t of ev.turns as { turn: number; wasted: Record<string, string>; slots: number }[]) {
+      lines.push({ label: `turn ${t.turn}`, text: `${Object.keys(t.wasted).length} of ${t.slots} slots: ${Object.values(t.wasted).join(", ")}` });
+    }
+    if (ev.basis === "returned") lines.push({ label: "note", text: "the agent didn't report its prompt; counted everything search returned" });
+  }
+  return lines;
 }

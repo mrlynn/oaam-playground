@@ -1,0 +1,64 @@
+# Build and test the docs site on every change to the docs, the site, or the
+# dashboard logic it shares. Deploying to GitHub Pages is off until the repo
+# variable PAGES_ENABLED is set to "true" (Settings → Secrets and variables →
+# Actions → Variables), after Pages is turned on with "GitHub Actions" as the source.
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'site/**', 'web/src/lib/**', 'web/tests/**', '.github/workflows/site.yml']
+  pull_request:
+    paths: ['docs/**', 'site/**', 'web/src/lib/**', 'web/tests/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      # The dashboard's pure logic, which the replay imports. No install needed.
+      - name: web/src/lib tests
+        run: node --test web/tests/*.test.mjs
+      - name: Install site
+        working-directory: site
+        run: npm ci
+      - name: Site tests (the committed export, through the shared logic)
+        working-directory: site
+        run: npm test
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Build (fails on any broken link or anchor)
+        working-directory: site
+        run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+        with:
+          path: site/build
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

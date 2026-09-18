@@ -110,12 +110,18 @@ Two tabs.
 |---|---|
 | `src/lib/db.ts` | the single connection pool (cached across hot reloads). `query()` calls `connection()` so nothing reads the database at build time. |
 | `src/lib/queries.ts` | every SQL statement. Views only, bind variables only. |
+| `src/lib/runTypes.ts` | the row type of every view the dashboard reads (types only) |
 | `src/lib/memoryState.ts` | memory as of turn *n*, from diffs (pure, tested) |
-| `src/lib/findings.ts` | new/open/resolved, badges, memory stats (pure, tested) |
-| `src/lib/lifecycle.ts` | waterfall layout and stage totals (pure, tested) |
+| `src/lib/why.ts` | the "why" rows: results in order, content as of the turn, origin, badges (pure, tested) |
+| `src/lib/findings.ts` | new/open/resolved, badges, memory stats, and how a finding reads: labels, roles, evidence (pure, tested) |
+| `src/lib/lifecycle.ts` | waterfall layout, stage totals, and what each stage produced (pure, tested) |
+| `src/lib/demoExport.ts` | the shape of the docs site's recorded export, and the demo-moment checks |
+| `scripts/export-demo.mts` | writes that export: `npm run export-demo` |
 | `src/components/run/*` | scrubber, "why" pane, memory state card, run view, header |
 | `src/components/health/FindingCard.tsx` | one finding |
-| `tests/*.test.mjs` | 23 `node --test` cases |
+| `tests/*.test.mjs` | 25 `node --test` cases |
+
+The pure files in `src/lib` import nothing that needs a server, so the docs site's replay imports them as they are. The replay and the dashboard compute the same view from the same code.
 
 ## Related
 

@@ -6,24 +6,13 @@ import Typography from "@mui/material/Typography";
 import Link from "next/link";
 
 import HintChip from "@/components/HintChip";
-import { fmtDistance } from "@/components/run/MemoryStateCard";
-import type { Badge } from "@/lib/findings";
 import { type PromptLabel, promptLabel } from "@/lib/memoryState";
 import { memoryTypeColor } from "@/lib/memoryTypes";
 import type { Retrieval, TurnPrompt, TurnRow } from "@/lib/runTypes";
-import { shortId } from "@/lib/format";
+import { fmtDistance, shortId } from "@/lib/format";
+import { type WhyRow, whySummary } from "@/lib/why";
 
-export type WhyRow = Retrieval & {
-  /** Content as it was at this turn when the run log knows, else the current row. */
-  content: string | null;
-  /** Where it was created: a turn of this run, another run, or unknown. */
-  origin: { runId: string; turn: number } | null;
-  /** Thread the record is stored on (for records created before the run log). */
-  storedThread: string | null;
-  gone: boolean;
-  /** Open findings from the latest health check that accuse this memory. */
-  badges: Badge[];
-};
+export type { WhyRow };
 
 type Props = {
   runId: string;
@@ -44,8 +33,6 @@ export default function WhyPanel({ runId, turn, rows, prompt, turnHref }: Props)
   const queries = turn.attrs?.queries ?? [];
   const searches = [...new Set(rows.map((r) => r.search))].sort((a, b) => a - b);
   const maxDistance = Math.max(0.0001, ...rows.map((r) => r.distance ?? 0));
-  const inPrompt = rows.filter((r) => r.in_prompt === true).length;
-  const reported = rows.some((r) => r.in_prompt !== null);
 
   return (
     <Stack spacing={1.5}>
@@ -59,11 +46,7 @@ export default function WhyPanel({ runId, turn, rows, prompt, turnHref }: Props)
           </Typography>
         ) : null}
         <Typography variant="body2" color="text.secondary">
-          {rows.length === 0
-            ? "The agent didn't search this turn, or search returned nothing: the reply used no memories."
-            : reported
-              ? `${rows.length} results from ${searches.length} search${searches.length === 1 ? "" : "es"}; ${inPrompt} went into the prompt.`
-              : `${rows.length} results from ${searches.length} search${searches.length === 1 ? "" : "es"}. The agent didn't report which it used, so none are marked "in prompt".`}
+          {whySummary(rows)}
         </Typography>
       </Paper>
 

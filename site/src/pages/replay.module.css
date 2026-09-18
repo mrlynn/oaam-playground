@@ -1,0 +1,49 @@
+.intro {
+  max-width: 46rem;
+  margin-bottom: 1.25rem;
+}
+
+.moments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.moment {
+  text-align: left;
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.moment:hover {
+  border-color: var(--ifm-color-primary);
+}
+
+.moment strong {
+  color: var(--ifm-color-primary);
+}
+
+.anchor {
+  scroll-margin-top: 5rem;
+}
+
+.findings {
+  margin-top: 3rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.findings > p {
+  max-width: 46rem;
+  margin: 0;
+}
