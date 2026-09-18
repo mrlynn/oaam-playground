@@ -22,9 +22,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from oracleagentmemory.core.dbschemapolicy import SchemaPolicy  # noqa: E402
 
-from memory_inspector.db import build_memory, create_pool  # noqa: E402
+from aim_demo.config import SEED_USER, load_settings  # noqa: E402
+from aim_demo.db import build_memory, create_pool  # noqa: E402
 
 CONVERSATIONS = Path(__file__).resolve().parent.parent / "conversations"
+
+
+def clear_run_log(pool) -> None:
+    """RECREATE drops the package's threads but not our run log, which would
+    then describe threads that no longer exist. Events and turns cascade."""
+    with pool.acquire() as conn:
+        cur = conn.cursor()
+        if cur.execute("select count(*) from user_tables where table_name = 'AIM_RUNS'").fetchone()[0]:
+            cur.execute("delete from aim_run_events where run_id is null")
+            cur.execute("delete from aim_runs")
+            print(f"run log cleared ({cur.rowcount} runs)")
+            conn.commit()
 
 
 def main() -> None:
@@ -32,11 +45,17 @@ def main() -> None:
     parser.add_argument("--reset", action="store_true", help="drop and recreate the managed schema (destructive)")
     args = parser.parse_args()
 
-    pool = create_pool()
+    settings = load_settings()
+    if args.reset and settings.db_user != SEED_USER:
+        # aim_live holds real conversations. A RECREATE there is unrecoverable.
+        sys.exit(f"refusing --reset on {settings.db_user}: only {SEED_USER} may be reset")
+
+    pool = create_pool(settings)
     policy = SchemaPolicy.RECREATE if args.reset else SchemaPolicy.CREATE_IF_NECESSARY
-    memory = build_memory(pool, schema_policy=policy)
+    memory = build_memory(pool, settings, schema_policy=policy)
     if args.reset:
         print("schema recreated")
+        clear_run_log(pool)
 
     for path in sorted(CONVERSATIONS.glob("*.yaml")):
         convo = yaml.safe_load(path.read_text())

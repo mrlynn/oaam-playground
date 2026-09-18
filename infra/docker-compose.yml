@@ -10,6 +10,7 @@ services:
       ORACLE_PASSWORD: ${ORACLE_PASSWORD:?set ORACLE_PASSWORD in infra/.env}
       AIM_APP_PASSWORD: ${AIM_APP_PASSWORD:?set AIM_APP_PASSWORD in infra/.env}
       AIM_WEB_PASSWORD: ${AIM_WEB_PASSWORD:?set AIM_WEB_PASSWORD in infra/.env}
+      AIM_LIVE_PASSWORD: ${AIM_LIVE_PASSWORD:?set AIM_LIVE_PASSWORD in infra/.env}
     volumes:
       - aim-oracle-data:/opt/oracle/oradata
       - ./init:/container-entrypoint-initdb.d:ro

@@ -18,7 +18,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from memory_inspector.db import build_memory, create_pool, enable_package_logging  # noqa: E402
+from aim_demo.db import build_memory, create_pool, enable_package_logging  # noqa: E402
 
 CONVERSATION = Path(__file__).resolve().parent.parent / "conversations" / "support_01.yaml"
 timings: dict[str, float] = {}

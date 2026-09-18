@@ -154,3 +154,14 @@ The order is chosen so daily use starts as soon as possible and the dashboard is
 - **Two schemas mean two sets of views and grants,** and forgetting one breaks the dashboard for that schema. `check_web_grants.py` covers both.
 - **The companion becomes the project.** Keep it to a REPL with a turn loop. Tools, a UI and integrations are out.
 - **Extraction nondeterminism.** The stale fact may not recur on every seed, so `correction_01.yaml` forces it. Real data will have its own.
+
+## As built
+
+### Step 1 (library skeleton and run log schema)
+- **`AIM_TURNS` gained `attrs JSON`.** The Risks section puts `closed_by` in turn attrs, but the table in step 1 had no column for it.
+- **`apply_sql.py` also installs the run log** through the library's public `install()`, so the demo sets up with one command and uses the same code path as `memory-inspector init`. The CLI is still the documented route for other projects.
+- **`apply_sql.py --create-store`** creates the package schema in a new schema (as `aim_live` needed) by building the client with `CREATE_IF_NECESSARY`. This makes one embedding call.
+- **`aim_live` is created by `infra/init/02_live_user.sh`**, which runs on fresh volumes and by hand (`docker exec`) on existing containers, instead of a SQL file under `infra/sql/admin/`. Its password is `AIM_LIVE_PASSWORD` in `infra/.env`.
+- **`aim_demo.load_settings(user)`** reads `<USER>_PASSWORD`, so every script can target either schema.
+- **CLI passwords come from `MEMORY_INSPECTOR_DB_PASSWORD` or a prompt**, never an argument. `--grant-to` is validated as an Oracle identifier before being put into a GRANT.
+- **The library pins `oracleagentmemory>=26.6.0,<26.7`**, not `==`, because stage mapping depends on the log messages of that minor version. The demo still pins `==26.6.0`.

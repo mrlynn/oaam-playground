@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from memory_inspector.config import REPO_DIR, load_settings  # noqa: E402
-from memory_inspector.db import create_pool  # noqa: E402
+from aim_demo.config import REPO_DIR, load_settings  # noqa: E402
+from aim_demo.db import create_pool  # noqa: E402
 
 OUT = REPO_DIR / "docs" / "schema-snapshot.md"
 
