@@ -43,18 +43,37 @@ def describe_origin(origin: Origin, current_thread: str | None) -> str:
     return f"created in an earlier conversation ({origin.run_id[:8]}…, turn {origin.turn})"
 
 
+@dataclass(frozen=True)
+class WhyRow:
+    rank: int
+    id: str
+    record_type: str
+    distance: float
+    in_prompt: bool
+    origin: Origin
+    origin_text: str
+    content: str
+
+
+def why_rows(reply: Reply, origins: dict[str, Origin], current_thread: str | None) -> list[WhyRow]:
+    used = {r.id for r in reply.used}
+    rows = []
+    for rank, r in enumerate(reply.results, start=1):
+        origin = origins.get(r.id, Origin(None, None))
+        rows.append(WhyRow(rank, r.id, r.record.record_type, r.distance, r.id in used, origin,
+                           describe_origin(origin, current_thread), r.record.content or ""))
+    return rows
+
+
 def render_why(reply: Reply | None, origins: dict[str, Origin], current_thread: str | None, width: int = 100) -> str:
     if reply is None:
         return "Nothing to explain yet: say something first."
     if not reply.results:
         return f'why: "{reply.user_message}"\n  search returned nothing, so the reply used no memories.'
-    used = {r.id for r in reply.used}
     lines = [f'why: "{textwrap.shorten(reply.user_message, 80)}"',
              "  rank  type        distance  (lower is closer)"]
-    for rank, r in enumerate(reply.results, start=1):
-        label = "in prompt" if r.id in used else "also returned"
-        rec = r.record
-        lines.append(f"  #{rank:<3} {rec.record_type:<11} {r.distance:.3f}     {label:<14} "
-                     f"{describe_origin(origins.get(r.id, Origin(None, None)), current_thread)}")
-        lines += textwrap.wrap(rec.content or "", width=width, initial_indent="        ", subsequent_indent="        ")
+    for row in why_rows(reply, origins, current_thread):
+        label = "in prompt" if row.in_prompt else "also returned"
+        lines.append(f"  #{row.rank:<3} {row.record_type:<11} {row.distance:.3f}     {label:<14} {row.origin_text}")
+        lines += textwrap.wrap(row.content, width=width, initial_indent="        ", subsequent_indent="        ")
     return "\n".join(lines)
