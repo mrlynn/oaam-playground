@@ -75,6 +75,8 @@ uv run companion --web                                    # the same chat in a b
 |---|---|
 | `--script FILE` | replay a YAML conversation (`user_id`, `agent_id`, `messages`, optional `explicit_memory`) |
 | `--live` | with `--script`, the model writes the replies instead of the scripted lines |
+
+Chat, in the terminal or with `--web`, creates each thread with the inspector's tested `memory_extraction_custom_instructions` (`EXTRACTION_INSTRUCTIONS`), so conversation state like "the assistant asked…; awaiting reply" isn't stored. `--script` replays don't use them, so the seeds still produce the transient memories the demo and labs find.
 | `--web` | serve the chat as a web page instead of the terminal |
 | `--host`, `--port` | with `--web`. Default `127.0.0.1` and `8765`. Any address that isn't loopback needs `COMPANION_WEB_TOKEN`. |
 | `--db-user` | schema. Default `aim_live` for chat, `aim_app` for scripts. |
@@ -120,7 +122,7 @@ uv run jupyter nbconvert --to notebook --execute lab3_retrieval_quality.ipynb --
 
 ```bash
 cd inspector && uv run pytest -q      # 76: stages and spans (captured fixture), turns, diff, health checks, judge
-cd companion && uv run pytest -q      # 19: prompt assembly, token counting, /why, the web server
+cd companion && uv run pytest -q      # 20: prompt assembly, token counting, extraction instructions, /why, the web server
 cd web && npm test                    # 25: memory state, "why" rows, findings, lifecycle
 cd web && npm run lint && npm run build
 cd site && npm test                   # 5: the committed export through the shared logic

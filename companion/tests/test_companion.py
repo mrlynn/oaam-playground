@@ -51,6 +51,7 @@ class FakeMemory:
         self.n = n_results
 
     def create_thread(self, **kw):
+        self.thread_kwargs = kw
         return FakeThread("t1", inspector=self.inspector)
 
     def search(self, query, **kw):
@@ -154,3 +155,11 @@ def test_why_labels_prompt_membership_and_origin():
 def test_why_before_anything_was_said():
     assert "Nothing to explain" in render_why(None, {}, None)
     assert describe_origin(Origin(None, None), "t") == "created before the inspector was running"
+
+
+def test_extraction_instructions_reach_the_thread_only_when_set():
+    memory = FakeMemory()
+    Companion(memory, user_id="me", agent_id="companion", model="m").new_thread()
+    assert "memory_extraction_custom_instructions" not in memory.thread_kwargs  # scripted replays
+    Companion(memory, user_id="me", agent_id="companion", model="m", extraction_instructions="keep it durable").new_thread()
+    assert memory.thread_kwargs["memory_extraction_custom_instructions"] == "keep it durable"
