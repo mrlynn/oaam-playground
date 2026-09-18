@@ -27,10 +27,14 @@ class FakeTurn:
 class FakeInspector:
     def __init__(self):
         self.prompts = []
+        self.described = []
         self.last_turn = None
 
     def record_prompt(self, *args, **kwargs):
         self.prompts.append((args, kwargs))
+
+    def describe_run(self, run_id, *, llm_model=None, embed_model=None):
+        self.described.append((run_id, llm_model))
 
 
 @dataclass

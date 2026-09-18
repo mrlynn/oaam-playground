@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from pydantic import BaseModel, Field
 
 from .agent import Companion, Remembered, Reply
+from .models import Model
 from .why import Origin, why_rows
 
 COOKIE = "companion_token"
@@ -57,7 +58,7 @@ class Info:
     db_user: str
     user_id: str
     agent_id: str
-    model: str
+    model: str  # the default
     dashboard_url: str | None  # the inspector dashboard, for "open in inspector" links
 
 
@@ -65,8 +66,13 @@ class TurnIn(BaseModel):
     message: str = Field(min_length=1, max_length=20_000)
 
 
-def create_app(info: Info, make_companion: Callable[[], Companion],
+class ModelIn(BaseModel):
+    model: str | None = None  # None means the default
+
+
+def create_app(info: Info, make_companion: Callable[[str], Companion],
                find_origins: Callable[[list[str]], dict[str, Origin]], *,
+               list_models: Callable[[], tuple[list[Model], str | None]] | None = None,
                token: str | None = None, on_shutdown: Callable[[], None] | None = None) -> FastAPI:
     worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="companion")
     sessions: dict[str, Companion] = {}
@@ -97,6 +103,19 @@ def create_app(info: Info, make_companion: Callable[[], Companion],
                 return JSONResponse({"detail": "open the link with ?token= first"}, status_code=401)
         return await call_next(request)
 
+    async def models() -> tuple[list[Model], str | None]:
+        if list_models is None:
+            return [Model(info.model, f"{info.model} (default)", False)], None
+        return await asyncio.to_thread(list_models)  # a short HTTP call to Ollama
+
+    async def allowed(model: str | None) -> str:
+        # Only models the page offered: the page must not name arbitrary providers.
+        if model is None or model == info.model:
+            return info.model
+        if model not in {m.id for m in (await models())[0]}:
+            raise HTTPException(400, f"not an available model: {model}")
+        return model
+
     def session(sid: str) -> Companion:
         comp = sessions.get(sid)
         if comp is None:
@@ -120,17 +139,33 @@ def create_app(info: Info, make_companion: Callable[[], Companion],
     async def get_info():
         return info.__dict__
 
+    @app.get("/api/models")
+    async def get_models():
+        found, error = await models()
+        return {"default": info.model, "models": [m.__dict__ for m in found], "error": error}
+
     @app.post("/api/sessions")
-    async def new_session():
-        comp = make_companion()
+    async def new_session(body: ModelIn | None = None):
+        comp = make_companion(await allowed(body.model if body else None))
         thread_id = await run(comp.new_thread)
         sid = uuid.uuid4().hex
         sessions[sid] = comp
-        return {"session_id": sid, "thread_id": thread_id}
+        return {"session_id": sid, "thread_id": thread_id, "model": comp.model}
 
     @app.post("/api/sessions/{sid}/new")
     async def new_thread(sid: str):
         return {"thread_id": await run(session(sid).new_thread)}
+
+    @app.post("/api/sessions/{sid}/model")
+    async def set_model(sid: str, body: ModelIn):
+        # A thread extracts with the model it was created with, so a new model means a new thread.
+        comp, model = session(sid), await allowed(body.model)
+
+        def switch() -> str:
+            comp.model = model
+            return comp.new_thread()
+
+        return {"thread_id": await run(switch), "model": model}
 
     @app.post("/api/sessions/{sid}/turns")
     async def turn(sid: str, body: TurnIn):
@@ -146,7 +181,7 @@ def create_app(info: Info, make_companion: Callable[[], Companion],
             try:
                 reply: Reply = comp.respond(body.message)
                 emit({"type": "reply", "text": reply.text, "retrieved": len(reply.results),
-                      "in_prompt": len(reply.used), "thread_id": comp.thread.thread_id})
+                      "in_prompt": len(reply.used), "thread_id": comp.thread.thread_id, "model": comp.model})
             except Exception as e:  # noqa: BLE001 - shown to the user, like a traceback in the terminal
                 emit({"type": "error", "stage": "reply", "message": f"{type(e).__name__}: {e}"})
                 return
@@ -191,7 +226,10 @@ def serve(cfg: Any, *, host: str, port: int) -> None:
 
     import uvicorn
 
+    from oracleagentmemory.core.llms.llm import Llm
+
     from .config import LIVE_EXTRACTION_INSTRUCTIONS, open_memory
+    from .models import available_models
     from .why import find_origins
 
     token = os.getenv("COMPANION_WEB_TOKEN") or None
@@ -207,9 +245,11 @@ def serve(cfg: Any, *, host: str, port: int) -> None:
     dashboard = os.getenv("COMPANION_DASHBOARD_URL", "http://localhost:3000").rstrip("/") or None
     app = create_app(
         Info(cfg.db_user, cfg.user_id, cfg.agent_id, cfg.llm_model, dashboard),
-        lambda: Companion(memory, user_id=cfg.user_id, agent_id=cfg.agent_id, model=cfg.llm_model,
-                          extraction_instructions=LIVE_EXTRACTION_INSTRUCTIONS),
+        lambda model: Companion(memory, user_id=cfg.user_id, agent_id=cfg.agent_id, model=model,
+                                extraction_instructions=LIVE_EXTRACTION_INSTRUCTIONS,
+                                make_llm=lambda m: Llm(model=m)),
         lambda ids: find_origins(pool, ids),
+        list_models=lambda: available_models(cfg.llm_model),
         token=token, on_shutdown=close)
     shown = "localhost" if is_loopback(host) else host
     print(f"companion · {cfg.db_user} · user {cfg.user_id} · http://{shown}:{port}/"
