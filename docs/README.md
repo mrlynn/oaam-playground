@@ -13,6 +13,19 @@ Personal work sample, built to learn the package. Apache-2.0.
 
 Status: **milestone 4.** Every step is built except validating the health check on real companion data ([plan](plans/m4-health.md)).
 
+## Documentation
+
+| I want to… | read |
+|---|---|
+| see it work, from a clean machine | [Tutorial: first run](tutorial/first-run.md) |
+| show it to someone (5 min, 15 min, workshop) | [Demo guide](how-to/demo.md), with `agent/scripts/demo_links.py` for today's URLs |
+| understand how it works and why | [How it works](explanation/how-it-works.md) · [How the health check works](explanation/health-checks.md) |
+| add it to another agent | [Instrument your own agent](how-to/instrument-your-agent.md) |
+| reseed, upgrade, fix something | [Operate and troubleshoot](how-to/operate.md) |
+| look up an API, table, page or flag | [Library and CLI](reference/inspector.md) · [Data model](reference/data-model.md) · [Dashboard](reference/dashboard.md) · [Scripts and configuration](reference/scripts-and-config.md) |
+| know what we learned about the package | [Friction log and five fixes](friction.md) · [Token method](token-method.md) · [Phase 0 answers](phase0-answers.md) · [Schema snapshot](schema-snapshot.md) |
+| see how it was planned and built | [M2](plans/m2-thread-view.md) · [M3](plans/m3-run-log.md) · [M4](plans/m4-health.md) |
+
 ![Thread view: conversation on the left, the durable memories it produced on the right](img/thread-view.png)
 
 ## Prerequisites
@@ -58,6 +71,7 @@ Other scripts:
 - `smoke.py`: the minimal proof, with one thread, one memory and one search.
 - `dump_schema.py`: regenerates `docs/schema-snapshot.md`. Rerun after any package bump.
 - `probe_inspector.py`: the inspector's end-to-end check against the real package. Rerun after any package bump.
+- `demo_links.py`: prints today's demo URLs and says whether each demo moment reproduced in this seed.
 - `check.py`: the health check with this repo's settings (the same as `memory-inspector check`).
 - `spikes/`: the M4 spikes (search metric, custom instructions, judge agreement). Rerun `judge_agreement.py` whenever the judge prompt changes.
 

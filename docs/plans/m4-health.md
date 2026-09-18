@@ -227,7 +227,7 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
 - **"Why" badges:** results in the "why" view carry badges from the latest check, linked to `/memories#finding-<id>`. The run page fetches findings only in "why" mode.
 - **An app-bar nav** (Runs and Memory) was added.
 - **Change from reviewing it in the browser:** a supersession can leave detail only in the stale memory. "Will get read-only accounts… expiring after 90 days" was superseded by "accounts have been created", which drops the expiry. The fix now says to fold unique detail into the current memory with `update_memory` **before** deleting. That's covered by a test.
-- **Seen on the seeds:** three of the four most-retrieved memories are flagged (one stale, two transient). The memories that reach the model most often are frequently the ones that shouldn't be there. That's worth a line in the friction summary.
+- **Seen on the seeds:** three of the four most-retrieved memories are flagged (one stale, one transient, one duplicate; corrected from "two transient" when writing the docs). The memories that reach the model most often are frequently the ones that shouldn't be there. That's worth a line in the friction summary.
 - **Verified:**
   - `/memories` findings and All memories at 1440 px, and at 375 px in dark mode with no page-level horizontal scroll (the table scrolls inside its container).
   - The "why" view on the support_03 turn shows "transient", "stale" and "duplicate ×3" badges.

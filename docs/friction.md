@@ -134,7 +134,7 @@ The five below are ordered by how much they cost an agent's answers.
 
 **Observed.** Written one exchange at a time, the way agents write, extraction stores the conversation's state as durable memory: "Assistant asked the user which region…; awaiting reply".
 - That's about 4 in 20 memories per support conversation.
-- These are then retrieved in later sessions. On the seeds, **3 of the 4 most-retrieved memories were stale or transient.** The memories that reach the model most often are frequently the ones that shouldn't exist.
+- These are then retrieved in later sessions. On the seeds, **3 of the 4 most-retrieved memories carried a finding: one stale, one transient, one duplicated.** The memories that reach the model most often are frequently the ones that shouldn't exist.
 - In the reproduced miss (seed `support_03`), transient and duplicate memories took 3 of 5 prompt slots, and the user's contact preference wasn't in the top 10.
 
 **Suggested fix.** Make "store only what matters in a later conversation" the **default** extraction behaviour. The package already has the lever: `memory_extraction_custom_instructions`, with the tested wording in `memory_inspector/health/checks.py` (`EXTRACTION_INSTRUCTIONS`), took transient memories from 4 to 0 in every trial and total memories down by about a third. One warning: the wording must keep corrections saying what they correct. Telling extraction to drop the earlier value removed the only signal of which fact is current.
