@@ -232,3 +232,23 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
   - `/memories` findings and All memories at 1440 px, and at 375 px in dark mode with no page-level horizontal scroll (the table scrolls inside its container).
   - The "why" view on the support_03 turn shows "transient", "stale" and "duplicate ×3" badges.
   - `tsc`, lint and tests are clean. `npm run build` was not rerun (a dev server was running in `web/`); it goes in the end-of-M4 checks.
+
+### Step 4 (lifecycle: `/runs/[id]/turn/[n]`)
+- **A waterfall, not stage lanes.** Stages nest (the ingestion span of `add_messages` contains extraction, which contains summarization and consolidation), so one lane per stage would draw ingestion stretched over everything. Each span gets a row instead, indented by depth and coloured by stage (`lib/stageColors.ts`), as in a devtools trace.
+  - Agent calls are bold. Spans whose end was inferred (`end_inferred`, `unclosed`) are dashed.
+  - Each row's `title` gives name, stage, duration, source and any error.
+- **All spans shown by default.** A normal turn is about 28 spans, and the story sits 3–4 levels down. Turns over 40 spans collapse to depth ≤ 3, with a "show deeper spans" link (`?depth=all`).
+- **Per-stage cards:**
+  - Time is counted once per outermost span of that stage (`stageTotals`), with the share of wall time. Overlapping stages can sum past 100%, and the card says so.
+  - What each stage produced:
+    - retrieval: agent searches, results, how many went into the prompt, the closest distance
+    - extraction: the diff, with the first three created memories
+    - ingestion: messages written, and chunks inserted (summed from folded `Record-chunk insert` points)
+    - consolidation: past memories looked up
+    - summarization: one LLM call
+  - "No earlier memory was revised" appears only when the diff has no updates.
+- The package's own LLM token spend is labelled "not reported by the package", never shown as zero.
+- **Links:** "lifecycle of turn n →" in the scrubber strip. Previous and next turn, "conversation at turn n" and "why" from the lifecycle page. Bad turns and runs return a real 404 (`parseTurnParam` accepts positive integers only).
+- **Pure layout** is in `lib/lifecycle.ts` (`waterfall`, `stageTotals`, `sumPointExtras`), with 7 `node --test` cases. There are 23 web tests in total.
+- **Seen on the seeds.** Turn 3 of support_01 (the correction) is 12.4 s of package work: a 1.6 s context-summary LLM call, a 65 ms past-memory lookup, a **9.5 s extraction LLM call**, and a 179 ms store write. The companion's "remembering…" pause is almost entirely one LLM call. Extraction created 5 memories and revised none.
+- **Verified:** 1440 px dark, and 375 px light with no horizontal scroll. 404s for turns 0, 99 and "abc" and for a bogus run. No console errors. `npm run build` is deferred to the end-of-M4 checks.

@@ -73,6 +73,10 @@ export default function RunView(p: RunViewProps) {
             {current.attrs?.closed_by ? ` · closed by ${current.attrs.closed_by}` : ""}
             {current.reply_source === "scripted" ? " · scripted reply" : ""}
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <Link href={`/runs/${id}/turn/${turn}`}>
+            <Typography variant="body2" component="span">lifecycle of turn {turn} →</Typography>
+          </Link>
         </Stack>
       </Paper>
 

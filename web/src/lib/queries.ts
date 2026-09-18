@@ -3,6 +3,7 @@ import "server-only";
 import { query, v } from "./db";
 import type {
   CheckRunRow,
+  EventRow,
   FindingRow,
   FindingStub,
   MemoryOrigin,
@@ -118,7 +119,7 @@ export function getThreadMemories(
 
 // ---- run log (memory-inspector) --------------------------------------------
 
-export type { CheckRunRow, FindingRow, FindingStub, MemoryOrigin, RetrievalStat, RunRow, TurnPrompt, TurnRow } from "./runTypes";
+export type { CheckRunRow, EventRow, FindingRow, FindingStub, MemoryOrigin, RetrievalStat, RunRow, TurnPrompt, TurnRow } from "./runTypes";
 
 /** `:p0, :p1, ...` placeholders and binds for an IN list. */
 function inList(prefix: string, values: string[]): { sql: string; binds: Record<string, string> } {
@@ -277,4 +278,17 @@ export function getFindingStubs(checkRunId: number): Promise<FindingStub[]> {
 export async function getLatestFindings(): Promise<FindingRow[]> {
   const run = await getLatestCheckRun();
   return run ? getFindings(run.check_run_id) : [];
+}
+
+// ---- lifecycle ------------------------------------------------------------
+
+export function getTurnEvents(runId: string, turn: number): Promise<EventRow[]> {
+  return query<EventRow>(
+    `select event_id, seq, parent_seq, depth, stage, name, source, started_at, duration_ms,
+            input_summary, output_summary, memory_ids, attrs, error
+       from ${v("aim_v_run_events")}
+      where run_id = :runId and turn = :turn
+      order by seq`,
+    { runId, turn },
+  );
 }

@@ -110,3 +110,24 @@ export type RetrievalStat = {
   in_prompt: number;
   last_retrieved: Date | null;
 };
+
+// ---- lifecycle (AIM_V_RUN_EVENTS) ----------------------------------------------
+
+export type Stage = "ingestion" | "extraction" | "consolidation" | "retrieval" | "summarization" | "revision" | "other";
+
+export type EventRow = {
+  event_id: number;
+  seq: number;
+  parent_seq: number | null;
+  depth: number;
+  stage: Stage;
+  name: string;
+  source: "wrapper" | "log";
+  started_at: Date;
+  duration_ms: number | null;
+  input_summary: string | null;
+  output_summary: string | null;
+  memory_ids: string[] | null;
+  attrs: Record<string, unknown> | null;
+  error: string | null;
+};
