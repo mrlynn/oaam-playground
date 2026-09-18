@@ -59,7 +59,8 @@ def _delete(ids: list[str]) -> str:
 
 # ---- pairs: superseded, contradiction, duplicate, near_duplicate -------------------
 
-def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | None]) -> PairOutcome:
+def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | None],
+                transient: set[str] = frozenset()) -> PairOutcome:
     out = PairOutcome()
     parent: dict[str, str] = {}
 
@@ -122,10 +123,15 @@ def check_pairs(pairs: list[Pair], verdicts: dict[tuple[str, str], Verdict | Non
         judged[root].append({"ids": [p.older.id, p.newer.id], "distance": round(p.distance, 4),
                              "rationale": v.rationale, "model": v.model})
     for n, (root, members) in enumerate(clusters.items()):
-        keep = max(members, key=lambda m: (len(m.content), m.created_at))
-        drop = [m.id for m in members if m.id != keep.id]
         for m in members:
             out.duplicate_group[m.id] = n
+        # Never keep a transient copy: its own finding deletes it. If that leaves one lasting copy,
+        # the transient fix already resolves the duplicate, so don't report it twice.
+        lasting = [m for m in members if m.id not in transient]
+        if len(lasting) <= 1:
+            continue
+        keep = max(lasting, key=lambda m: (len(m.content), m.created_at))
+        drop = [m.id for m in lasting if m.id != keep.id]
         out.findings.append(_finding(
             "duplicate", user_id=keep.user_id, memory_ids=[m.id for m in members],
             title=f"The same {'fact' if keep.type == 'fact' else keep.type} is stored {len(members)} times: {quote(keep.content, 70)}",

@@ -273,3 +273,18 @@ def test_fixture_pairs_all_classify_to_a_finding_or_nothing():
         out = checks.check_pairs([Pair(older, newer, fp["distance"])], {(older.id, newer.id): verdict})
         expected = {"duplicate": ["duplicate"], "supersedes": ["superseded"], "complementary": [], "unrelated": []}[label]
         assert [f.kind for f in out.findings] == expected, fp["why"]
+
+
+def test_a_duplicate_never_keeps_a_transient_copy():
+    # Real case: "wants to understand X" and "has asked about X again" judged duplicates, and the
+    # longer, transient one was kept, so following both fixes deleted every copy.
+    pairs = [pair(PREF1, PREF2, 0.09)]
+    verdicts = {(p.older.id, p.newer.id): v("duplicate") for p in pairs}
+    out = checks.check_pairs(pairs, verdicts, transient={"p2"})
+    assert out.findings == []  # deleting the transient p2 resolves it
+    assert out.duplicate_group["p1"] == out.duplicate_group["p2"]  # still counted for crowded turns
+
+    pairs = [pair(PREF1, PREF2, 0.09), pair(PREF2, PREF3, 0.1)]
+    out = checks.check_pairs(pairs, {(p.older.id, p.newer.id): v("duplicate") for p in pairs}, transient={"p2"})
+    (f,) = out.findings
+    assert f.evidence["keep"] != "p2" and 'delete_memory("p2")' not in f.suggestion
