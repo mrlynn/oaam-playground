@@ -96,7 +96,11 @@ def create_app(info: Info, make_companion: Callable[[str], Companion],
         origin = request.headers.get("origin")
         if token is None and not is_loopback(urlsplit(f"//{host}").hostname or ""):
             return JSONResponse({"detail": "bad host"}, status_code=403)  # DNS rebinding
-        if origin is not None and urlsplit(origin).netloc != host:
+        # Behind the inspector (./demo.sh serves this page at /chat), the browser's origin is the
+        # inspector's, which the proxy passes as X-Forwarded-Host. A cross-site page can't forge
+        # it: a custom header forces a CORS preflight, and this server answers none.
+        allowed = {host, request.headers.get("x-forwarded-host", host)}
+        if origin is not None and urlsplit(origin).netloc not in allowed:
             return JSONResponse({"detail": "cross-origin request"}, status_code=403)
         if token is not None and request.url.path != "/":
             if not hmac.compare_digest(request.cookies.get(COOKIE, ""), token):
@@ -151,6 +155,13 @@ def create_app(info: Info, make_companion: Callable[[str], Companion],
         sid = uuid.uuid4().hex
         sessions[sid] = comp
         return {"session_id": sid, "thread_id": thread_id, "model": comp.model}
+
+    @app.get("/api/sessions/{sid}")
+    async def get_session(sid: str):
+        comp = session(sid)
+        last = comp.last  # lets a page that left mid-turn show the reply it missed
+        return {"thread_id": comp.thread.thread_id if comp.thread else None, "model": comp.model,
+                "last": {"user_message": last.user_message, "text": last.text} if last else None}
 
     @app.post("/api/sessions/{sid}/new")
     async def new_thread(sid: str):

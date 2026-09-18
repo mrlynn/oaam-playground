@@ -91,7 +91,7 @@ def test_token_mode_needs_the_cookie():
         assert client.get("/?token=wrong", follow_redirects=False).status_code == 401
         assert client.get("/?token=s3cret", follow_redirects=False).status_code == 303
         assert client.get("/api/info").json()["db_user"] == "aim_live"
-        assert "<title>Companion</title>" in client.get("/").text
+        assert "<title>Chat · Agent Memory Playground</title>" in client.get("/").text
 
 
 def test_loopback():
@@ -161,3 +161,25 @@ def test_embedding_and_cloud_models_are_not_chat_models():
     assert is_chat_model({"name": "qwen3.5:9b", "details": {"family": "qwen35"}})
     assert not is_chat_model({"name": "nomic-embed-text:latest", "details": {"family": "nomic-bert"}})
     assert not is_chat_model({"name": "kimi-k2.5:cloud", "details": {}})
+
+
+def test_a_session_can_be_resumed_by_a_reloaded_page():
+    client, *_ = make_app()
+    with client:
+        s = client.post("/api/sessions", json={"model": LOCAL.id}).json()
+        sid = s["session_id"]
+        assert client.get(f"/api/sessions/{sid}").json() == {"thread_id": "t1", "model": LOCAL.id, "last": None}
+        client.post(f"/api/sessions/{sid}/turns", json={"message": "hi"})
+        assert client.get(f"/api/sessions/{sid}").json()["last"] == {"user_message": "hi", "text": f"{LOCAL.id} reply to hi"}
+        assert client.get("/api/sessions/gone").status_code == 404
+
+
+def test_the_inspector_proxy_is_a_trusted_origin():
+    # ./demo.sh serves the page at localhost:3000/chat; the proxy forwards to :8765.
+    client, *_ = make_app()
+    with client:
+        via_proxy = {"Origin": "http://localhost:3000", "X-Forwarded-Host": "localhost:3000"}
+        assert client.post("/api/sessions", headers=via_proxy).status_code == 200
+        assert client.post("/api/sessions", headers={"Origin": "http://localhost:3000"}).status_code == 403
+        forged = {"Origin": "http://evil.example", "X-Forwarded-Host": "localhost:3000"}
+        assert client.post("/api/sessions", headers=forged).status_code == 403

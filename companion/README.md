@@ -33,7 +33,9 @@ It's the same turn with a page on top. The reply shows as soon as the model retu
 
 The dashboard links only work if the dashboard reads the same schema. For your live data, that means `AIM_SCHEMA=AIM_LIVE` in `web/.env.local`. `COMPANION_DASHBOARD_URL` moves or hides the links.
 
-It listens on `127.0.0.1` only, and refuses requests from other origins. The page writes to your memory store and spends model credits, so to serve it beyond your machine you must set `COMPANION_WEB_TOKEN` and use `--host`. Open the printed `?token=` link once per browser.
+`./demo.sh`, from the repo root, serves this page at `localhost:3000/chat` behind the inspector, with the same header as the inspector and the docs. There the inspector links stay on one URL, and the page keeps its conversation for the tab: go to Runs and come back, and it's still there. A reply that finishes after you leave is filled in on your return.
+
+It listens on `127.0.0.1` only, and refuses requests from other origins. Behind the inspector, the browser's origin arrives as `X-Forwarded-Host`, which it trusts: a cross-site page can't set that header without a CORS preflight, and this server answers none. The page writes to your memory store and spends model credits, so to serve it beyond your machine you must set `COMPANION_WEB_TOKEN` and use `--host`. Open the printed `?token=` link once per browser.
 
 Turns run one at a time, even across tabs. The inspector tracks the open turn per thread of execution, so every call runs on one worker thread (`web.py` says why).
 
