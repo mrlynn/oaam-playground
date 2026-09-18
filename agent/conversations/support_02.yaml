@@ -1,0 +1,17 @@
+# Second user, same agent. Opposite contact preference to Alice, so scope
+# isolation is visible: a search as u_bob must never surface Alice's rows.
+user_id: u_bob
+agent_id: support_bot
+messages:
+  - role: user
+    content: "Our nightly sync to Postgres stopped writing rows two days ago."
+  - role: assistant
+    content: "Let's look. Did anything change in the destination schema around then?"
+  - role: user
+    content: "We renamed the orders table to orders_v2. And call me on my phone for anything urgent, I never read email during the week."
+  - role: assistant
+    content: "Understood, phone for urgent issues. The sync is still mapped to the old orders table name."
+  - role: user
+    content: "Makes sense. Can you remap it to orders_v2?"
+  - role: assistant
+    content: "Done. I've remapped the destination to orders_v2 and triggered a backfill for the last two days."

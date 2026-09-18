@@ -1,0 +1,25 @@
+# Alice again, a later thread. Restates the email preference and adds new
+# durable facts, so the same user has memories spread across two threads.
+user_id: u_alice
+agent_id: support_bot
+messages:
+  - role: user
+    content: "Hi again. We're onboarding two new analysts and I want them to get export access."
+  - role: assistant
+    content: "Happy to help. Should they get the same export-writer role you use?"
+  - role: user
+    content: "No, read-only. They should only be able to download reports, not configure exports."
+  - role: assistant
+    content: "Got it: a read-only analyst role. What are their names or emails?"
+  - role: user
+    content: "Priya Shah and Tom Okafor. Our company standard is that new access always expires after 90 days unless renewed."
+  - role: assistant
+    content: "Noted, 90-day expiry on new access. I'll create both accounts with the read-only analyst role."
+  - role: user
+    content: "Thanks. And like last time, email me when it's done, don't call."
+  - role: assistant
+    content: "Will do, email only. Both accounts are created and expire in 90 days."
+  - role: user
+    content: "One more thing: our fiscal year starts in February, so quarterly reports should follow that calendar."
+  - role: assistant
+    content: "Understood. Quarterly reports will use a February fiscal year start."

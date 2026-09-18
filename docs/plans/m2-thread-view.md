@@ -67,3 +67,10 @@ Scrubber, run log, lifecycle strip, `/memories`, cost chart, triggering turns fr
 - **CLOB/JSON handling in thin mode.** Expected to be fine with a fetch type handler. Verify in step 3 before building the UI.
 - **MUI 9 with Next 16.** This is a recent pairing. If `@mui/material-nextjs` lags, pin to the last compatible pair and log it.
 - **Nondeterministic seed.** The extracted memories vary between runs, so the UI must not assume particular content. Screenshots in the README are illustrative only.
+
+## As built (deviations)
+- **No `loading.tsx` on `/runs/[id]`.** Its Suspense boundary streamed a 200 before `notFound()` ran, so bogus ids returned 200. Reads take about 50 ms, so the skeleton wasn't worth losing the real 404.
+- **Tooltips on chips live in a client `HintChip` component.** Passing a server-rendered `Chip` into MUI `Tooltip` (which clones its child) caused a hydration mismatch on `/runs`. Other hints use native `title`.
+- **`seed.py` adds one exchange per `add_messages` call,** not the whole conversation. With one batch, every message and memory shared a timestamp and the derived positions were meaningless. Per-turn writes also exposed the stale-correction finding (see friction log, 03:05).
+- **Denied DML is `ORA-41900` on 26ai,** not `ORA-01031`. `check_web_grants.py` accepts any `DatabaseError`.
+- **`await connection()` in `query()`** instead of `dynamic = "force-dynamic"` (the Next 16 docs' recommendation). `next build` never touches the database.

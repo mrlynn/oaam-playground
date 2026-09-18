@@ -1,6 +1,6 @@
 # Schema snapshot
 
-Generated 2026-09-18 06:44 UTC by `agent/scripts/dump_schema.py`.
+Generated 2026-09-18 07:05 UTC by `agent/scripts/dump_schema.py`.
 
 - oracleagentmemory: **26.6.0**
 - oracledb (python): 4.0.2
@@ -15,11 +15,11 @@ Do not edit by hand. Rerun after any package version bump and diff.
 | table | rows |
 |---|---|
 | ACTOR_PROFILE | 0 |
-| MEMORY | 6 |
-| MESSAGE | 6 |
+| MEMORY | 33 |
+| MESSAGE | 22 |
 | ORACLEAGENTMEMORY_SCHEMA_META | 4 |
-| RECORD_CHUNKS | 12 |
-| THREAD | 1 |
+| RECORD_CHUNKS | 55 |
+| THREAD | 3 |
 
 Plus 3 vector index internal tables (`VECTOR$<index>$<object ids>$HNSW_*`), omitted below.
 
@@ -39,7 +39,7 @@ Plus 3 vector index internal tables (`VECTOR$<index>$<object ids>$HNSW_*`), omit
 | ACTOR_ID | VARCHAR2 | 128 |  |  | N |  |
 | ACTOR_TYPE | VARCHAR2 | 30 |  |  | N |  |
 | SPACE_ID | VARCHAR2 | 128 |  |  | Y |  |
-| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73237".nextval |
+| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73774".nextval |
 | INFORMATION | CLOB | 4000 |  |  | N |  |
 | METADATA | JSON | 8200 |  |  | Y |  |
 | CREATED_AT | TIMESTAMP(6) WITH TIME ZONE | 13 |  | 6 | N | SYSTIMESTAMP  |
@@ -49,7 +49,7 @@ Plus 3 vector index internal tables (`VECTOR$<index>$<object ids>$HNSW_*`), omit
 | column | type | length | precision | scale | nullable | default |
 |---|---|---|---|---|---|---|
 | RECORD_ID | VARCHAR2 | 128 |  |  | N |  |
-| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73259".nextval |
+| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73796".nextval |
 | THREAD_ID | VARCHAR2 | 128 |  |  | Y |  |
 | USER_ID | VARCHAR2 | 128 |  |  | Y |  |
 | AGENT_ID | VARCHAR2 | 128 |  |  | Y |  |
@@ -66,7 +66,7 @@ Plus 3 vector index internal tables (`VECTOR$<index>$<object ids>$HNSW_*`), omit
 | column | type | length | precision | scale | nullable | default |
 |---|---|---|---|---|---|---|
 | RECORD_ID | VARCHAR2 | 128 |  |  | N |  |
-| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73252".nextval |
+| ORDER_SEQ | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73789".nextval |
 | THREAD_ID | VARCHAR2 | 128 |  |  | Y |  |
 | USER_ID | VARCHAR2 | 128 |  |  | Y |  |
 | AGENT_ID | VARCHAR2 | 128 |  |  | Y |  |
@@ -90,7 +90,7 @@ Plus 3 vector index internal tables (`VECTOR$<index>$<object ids>$HNSW_*`), omit
 
 | column | type | length | precision | scale | nullable | default |
 |---|---|---|---|---|---|---|
-| CHUNK_ID | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73266".nextval |
+| CHUNK_ID | NUMBER | 22 |  |  | N | "AIM_APP"."ISEQ$$_73803".nextval |
 | SOURCE_ID | VARCHAR2 | 128 |  |  | N |  |
 | SOURCE_RECORD_TYPE | VARCHAR2 | 30 |  |  | N |  |
 | SOURCE_EMB_COLUMN | VARCHAR2 | 30 |  |  | N |  |
@@ -121,41 +121,52 @@ Type: P primary, U unique, R foreign key, C check (NOT NULL checks omitted).
 
 | table | constraint | type | columns | references | on delete | condition |
 |---|---|---|---|---|---|---|
-| ACTOR_PROFILE | SYS_C008721 | C | ACTOR_TYPE |  |  | actor_type IN ('user', 'agent') |
-| ACTOR_PROFILE | SYS_C008722 | P | ACTOR_ID |  |  |  |
-| MEMORY | SYS_C008736 | P | RECORD_ID |  |  |  |
+| ACTOR_PROFILE | SYS_C008813 | C | ACTOR_TYPE |  |  | actor_type IN ('user', 'agent') |
+| ACTOR_PROFILE | SYS_C008814 | P | ACTOR_ID |  |  |  |
+| BIN$W71+Ilw2Bm/gYwIAEqzkZw==$0 | BIN$W71+Ilw0Bm/gYwIAEqzkZw==$0 | P | METADATA_KEY |  |  |  |
+| BIN$W71+IlwwBm/gYwIAEqzkZw==$0 | BIN$W71+IlwpBm/gYwIAEqzkZw==$0 | C | ACTOR_TYPE |  |  | actor_type IN ('user', 'agent') |
+| BIN$W71+IlwwBm/gYwIAEqzkZw==$0 | BIN$W71+IlwqBm/gYwIAEqzkZw==$0 | P | ACTOR_ID |  |  |  |
+| BIN$W71is6z/BDTgYwIAEqxLJw==$0 | BIN$W71is6z4BDTgYwIAEqxLJw==$0 | C | ACTOR_TYPE |  |  | actor_type IN ('user', 'agent') |
+| BIN$W71is6z/BDTgYwIAEqxLJw==$0 | BIN$W71is6z5BDTgYwIAEqxLJw==$0 | P | ACTOR_ID |  |  |  |
+| MEMORY | SYS_C008828 | P | RECORD_ID |  |  |  |
 | MEMORY | MEMORY_THREAD_FK | R | THREAD_ID | THREAD | CASCADE |  |
-| MESSAGE | SYS_C008730 | P | RECORD_ID |  |  |  |
+| MESSAGE | SYS_C008822 | P | RECORD_ID |  |  |  |
 | MESSAGE | MESSAGE_THREAD_FK | R | THREAD_ID | THREAD | CASCADE |  |
-| ORACLEAGENTMEMORY_SCHEMA_META | SYS_C008715 | P | METADATA_KEY |  |  |  |
-| RECORD_CHUNKS | SYS_C008743 | P | CHUNK_ID |  |  |  |
-| THREAD | SYS_C008725 | P | RECORD_ID |  |  |  |
+| ORACLEAGENTMEMORY_SCHEMA_META | SYS_C008807 | P | METADATA_KEY |  |  |  |
+| RECORD_CHUNKS | SYS_C008835 | P | CHUNK_ID |  |  |  |
+| THREAD | SYS_C008817 | P | RECORD_ID |  |  |  |
 
 ## Indexes
 
 | table | index | type | subtype | domain type | unique | columns |
 |---|---|---|---|---|---|---|
-| ACTOR_PROFILE | SYS_C008722 | NORMAL |  |  | UNIQUE | ACTOR_ID |
-| MEMORY | SYS_C008736 | NORMAL |  |  | UNIQUE | RECORD_ID |
-| MESSAGE | SYS_C008730 | NORMAL |  |  | UNIQUE | RECORD_ID |
-| ORACLEAGENTMEMORY_SCHEMA_META | SYS_C008715 | NORMAL |  |  | UNIQUE | METADATA_KEY |
+| ACTOR_PROFILE | SYS_C008814 | NORMAL |  |  | UNIQUE | ACTOR_ID |
+| MEMORY | SYS_C008828 | NORMAL |  |  | UNIQUE | RECORD_ID |
+| MESSAGE | SYS_C008822 | NORMAL |  |  | UNIQUE | RECORD_ID |
+| ORACLEAGENTMEMORY_SCHEMA_META | SYS_C008807 | NORMAL |  |  | UNIQUE | METADATA_KEY |
 | RECORD_CHUNKS | RECORD_CHUNKS_EMBEDDING_VEC_I | VECTOR | INMEMORY_NEIGHBOR_GRAPH_HNSW |  | NONUNIQUE | EMBEDDING |
-| RECORD_CHUNKS | SYS_C008743 | NORMAL |  |  | UNIQUE | CHUNK_ID |
-| THREAD | SYS_C008725 | NORMAL |  |  | UNIQUE | RECORD_ID |
+| RECORD_CHUNKS | SYS_C008835 | NORMAL |  |  | UNIQUE | CHUNK_ID |
+| THREAD | SYS_C008817 | NORMAL |  |  | UNIQUE | RECORD_ID |
 
 ## Views
 
 | view | text length |
 |---|---|
+| AIM_V_MEMORIES | 1068 |
+| AIM_V_MESSAGES | 507 |
+| AIM_V_STORE_INFO | 472 |
+| AIM_V_THREADS | 965 |
 
 ## Sequences
 
 | sequence | increment | last |
 |---|---|---|
 | ISEQ$$_73237 | 1 | 1 |
-| ISEQ$$_73252 | 1 | 21 |
-| ISEQ$$_73259 | 1 | 21 |
-| ISEQ$$_73266 | 1 | 21 |
+| ISEQ$$_73543 | 1 | 1 |
+| ISEQ$$_73774 | 1 | 1 |
+| ISEQ$$_73789 | 1 | 41 |
+| ISEQ$$_73796 | 1 | 41 |
+| ISEQ$$_73803 | 1 | 61 |
 
 ## Triggers
 
