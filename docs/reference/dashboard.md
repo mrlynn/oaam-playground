@@ -2,6 +2,8 @@
 
 The dashboard in `web/` is a Next.js 16 app (App Router, MUI 9) that reads Oracle through `oracledb` in thin mode. It's read-only by construction: it logs in as `AIM_WEB`, which can only `SELECT` from the `AIM_V_*` views. It never writes anything, anywhere.
 
+It's also the front door of `./demo.sh`: `next.config.ts` proxies `/chat` to the companion's web server and `/docs` to the docs site, so all three share one URL and one header (Chat · Runs · Memory · Docs). The proxying doesn't change the rule above. The chat writes through its own server, never through the dashboard, and without `./demo.sh` those two paths just fail to connect.
+
 Every page is server-rendered on request. There are no API routes, and the only client-side code is the turn scrubber and some small controls. All state lives in the URL, so any view is a link you can share.
 
 ## Running it
@@ -18,11 +20,17 @@ npm run dev                    # http://localhost:3000
 | `AIM_WEB_USER` | `aim_web` | the read-only login |
 | `AIM_WEB_PASSWORD` | required | from `infra/.env` |
 | `AIM_DB_DSN` | `localhost:1521/FREEPDB1` | |
-| `AIM_SCHEMA` | `AIM_APP` | which schema's views to read. `AIM_LIVE` shows your real companion data. |
+| `AIM_SCHEMA` | `AIM_APP` | which schema's views to read. `AIM_LIVE` shows your real companion data. `./demo.sh` sets it to match the chat. |
+| `COMPANION_URL` | `http://127.0.0.1:8765` | where `/chat` is proxied |
+| `DOCS_URL` | `http://127.0.0.1:3101` | where `/docs` is proxied: the docs site built with `SITE_MODE=demo` |
 
 `npm test` runs the pure-logic tests under `node --test`. Also available: `npm run lint` and `npm run build`.
 
 ## Pages
+
+### `/`
+
+The front door: what the chat, the inspector and the docs are, with a link into each, and one loop through all three. The health-check command it shows uses the schema this dashboard reads.
 
 ### `/runs`
 

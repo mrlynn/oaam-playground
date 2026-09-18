@@ -123,7 +123,7 @@ uv run jupyter nbconvert --to notebook --execute lab3_retrieval_quality.ipynb --
 
 ```bash
 cd inspector && uv run pytest -q      # 80: stages and spans (captured fixture), turns, diff, health checks, judge
-cd companion && uv run pytest -q      # 26: prompt assembly, token counting, extraction instructions, /why, the web server, model choice
+cd companion && uv run pytest -q      # 28: prompt assembly, token counting, extraction instructions, /why, the web server, model choice
 cd web && npm test                    # 25: memory state, "why" rows, findings, lifecycle
 cd web && npm run lint && npm run build
 cd site && npm test                   # 5: the committed export through the shared logic
@@ -147,9 +147,27 @@ npm run build && npm run serve        # the production build
 
 `.github/workflows/site.yml` builds and tests the site on every push that touches `docs/`, `site/` or `web/src/lib/`. It deploys to GitHub Pages only when the repo variable `PAGES_ENABLED` is `true`.
 
+## The one-URL demo (`demo.sh`)
+
+```bash
+./demo.sh                      # aim_live: your own conversations
+./demo.sh --schema aim_app     # the seeded demo data
+./demo.sh --port 3005          # the front door on another port
+```
+
+It starts the companion's web server (`:8765`), the docs site built with `SITE_MODE=demo` (`:3101`, rebuilt into `site/build-demo` when `docs/` or the site changed), and the dashboard (`:3000`), which proxies `/chat` and `/docs` to the other two. The chat writes to the schema you pick and the dashboard reads the same one, because the script sets `AIM_SCHEMA` (which wins over `web/.env.local`). It reuses a chat server already on `:8765` only if that server uses the same schema, and stops with a message if the dashboard is already running from `web/`. Ctrl-C stops all three.
+
+| variable | default | meaning |
+|---|---|---|
+| `PORT` | `3000` | the front door, same as `--port` |
+| `COMPANION_PORT` | `8765` | the chat server |
+| `DOCS_PORT` | `3101` | the demo build of the docs site |
+
+`SITE_MODE=demo` changes only the docs site's paths and navbar: it's served under `/docs/`, its guide is at `/docs/guide/…` instead of `/docs/docs/…`, and the navbar links to Chat, Runs and Memory. The default build is still the GitHub Pages site.
+
 ## Dev server in this repo
 
-`.claude/launch.json` defines `web` (`npm --prefix web run dev`, `autoPort: true`) and `site` (the built docs site on port 3100). Next 16 refuses a second `next dev` in the same directory, so stop any other session's server first.
+`.claude/launch.json` defines `demo` (`./demo.sh`, `autoPort: true`), `web` (`npm --prefix web run dev`, `autoPort: true`), `companion` (the chat alone, on 8765) and `site` (the built docs site on port 3100). Next 16 refuses a second `next dev` in the same directory, so stop any other session's server first.
 
 ## Related
 

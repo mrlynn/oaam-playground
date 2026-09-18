@@ -28,10 +28,10 @@ This guide gets you from a cold laptop to a demo that lands. There are three len
    uv run python scripts/seed.py --reset && uv run python scripts/apply_sql.py
    ```
 
-4. **Start the dashboard,** and check that it shows the seeds, not your real data (`AIM_SCHEMA=AIM_APP` in `web/.env.local`).
+4. **Start the demo** on the seeded data. The chat, the inspector and the docs come up together at `http://localhost:3000`, all reading `aim_app`.
 
    ```bash
-   cd web && npm run dev
+   ./demo.sh --schema aim_app
    ```
 
 5. **Print today's links** and read the `->` lines. They say whether each demo moment reproduced in this seed.
