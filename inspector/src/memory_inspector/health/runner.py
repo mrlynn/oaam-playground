@@ -65,9 +65,9 @@ def gather_and_check(conn, *, tables: Tables, user_id: str | None, threshold: fl
     to_judge = checks.transient_candidates(list(memories.values()))
     memory_verdicts = {m.id: judge.memory(m) if judge else None for m in to_judge}
 
-    outcome = checks.check_pairs(pairs, pair_verdicts)
     transient = checks.check_transient(to_judge, memory_verdicts)
     transient_ids = {f.memory_ids[0] for f in transient}
+    outcome = checks.check_pairs(pairs, pair_verdicts, transient_ids)
     findings = checks.drop_overlaps(outcome.findings + transient)
     findings += checks.check_crowded_turns(recorded_turns(conn, user_id), outcome, transient_ids, set(memories))
     findings += checks.check_scope_mismatch(list(memories.values()))
