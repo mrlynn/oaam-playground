@@ -186,6 +186,7 @@ class InspectedMemory(_Passthrough):
             turn.bind(Scope(getattr(thread, "user_id", None), getattr(thread, "agent_id", None),
                             getattr(thread, "thread_id", None)))
             return {"output_summary": getattr(thread, "thread_id", None)}
+        self.inspector._safe(self.inspector.start_thread)
         thread = self.inspector.call("create_thread", "other", lambda: self._target.create_thread(**kwargs),
                                      scope=_kw_scope(kwargs), on_result=on_result)
         return InspectedThread(thread, self.inspector)

@@ -90,6 +90,11 @@ class SpanBuilder:
                 event.error = _truncate(error)
             self._close(event, now)
 
+    def wrapper_names(self) -> list[str]:
+        """The instrumented calls in this turn so far, in start order."""
+        with self._lock:
+            return [e.name for e in sorted(self._done + self._open, key=lambda e: e.seq) if e.source == "wrapper"]
+
     # log side ---------------------------------------------------------------
 
     def feed(self, rec: LogRecordView) -> None:

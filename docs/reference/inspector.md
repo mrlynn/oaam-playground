@@ -71,7 +71,7 @@ Anything that changes memory takes a snapshot of the user's memories before the 
 
 ### Turns
 
-A turn opens on the first recorded call and closes on `add_messages`, `delete_thread`, the end of an explicit `turn()` block, or `close()`. Its number is the thread's highest turn plus one, taken under a row lock on `AIM_RUNS`. A turn with no thread (for example, a search followed by `close()`) is written as unattributed events rather than dropped.
+A turn opens on the first recorded call and closes on `add_messages`, `delete_thread`, the end of an explicit `turn()` block, or `close()`. Its number is the thread's highest turn plus one, taken under a row lock on `AIM_RUNS`. A turn with no thread (for example, a search followed by `close()`) is written as unattributed events rather than dropped. The one exception: `create_thread` drops an open turn that holds nothing but an earlier `create_thread`, so two new threads in a row (or a model switch before anyone speaks) don't leave the next turn on the first thread. An unused thread has no run, so nothing is lost.
 
 ### `memory.inspector.record_prompt(prompt=None, reply=None, *, ...)`
 
@@ -87,6 +87,10 @@ Optional. Tells the inspector what the agent sent and got back on the current tu
 | `flat_history_tokens` | what the whole thread's history would have cost (see [token method](../token-method.md)) |
 | `token_method` | free text describing how you counted |
 | `reply_source` | `"model"` or `"scripted"`. The database rejects anything else. |
+
+### `memory.inspector.describe_run(run_id, *, llm_model=None, embed_model=None)`
+
+Optional. The models one thread uses, when they differ from the ones passed to `inspect()`: for an agent that picks a model per thread. The run log writes them with the thread's first turn, so call it right after `create_thread`. The web companion calls it when you pick a local model.
 
 ### `with memory.inspector.turn(thread=None):`
 
