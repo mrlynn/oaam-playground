@@ -48,7 +48,7 @@ Written by `inspect()`, from `sql/30_runlog.sql`.
 
 ### `AIM_RUNS`: one row per instrumented thread
 
-`run_id` (PK = the package's thread id; **no FK**, so the run log outlives a deleted thread), `source` (`instrumented`, `replay` or `live`), `user_id, agent_id, llm_model, embed_model, package_version, first_turn_at, last_turn_at, turn_count, notes`.
+`run_id` (PK = the package's thread id, with **no FK**, so the run log outlives a deleted thread), `source` (`instrumented`, `replay` or `live`), `user_id, agent_id, llm_model, embed_model, package_version, first_turn_at, last_turn_at, turn_count, notes`.
 
 ### `AIM_TURNS`: one row per turn
 

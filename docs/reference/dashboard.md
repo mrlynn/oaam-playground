@@ -34,7 +34,7 @@ One conversation. Its layout depends on whether the thread has a run log.
 
 **With a run log** (anything written through `inspect()`):
 
-- **The header** shows user, agent, message and memory counts, the run chip (turn count and source; hover for models and package version), and the expired-rows toggle.
+- **The header** shows user, agent, message and memory counts, the run chip (turn count and source, with models and package version on hover), and the expired-rows toggle.
 - **The scrubber** is a slider with step buttons. The **← and →** keys step turns too, except when focus is in a form field or on the slider itself. The strip under it shows this turn's created, updated, deleted and retrieved counts, prompt tokens against flat history, duration, how the turn closed, whether the reply was scripted, and a **"lifecycle of turn n →"** link. On desktop the strip sticks to the top.
 - **The conversation** is on the left. Turn *n*'s messages are outlined, and later turns are dimmed and collapsed to one line. Each assistant reply has a **why?** chip.
 - **The right pane** has two tabs:
