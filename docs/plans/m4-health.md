@@ -209,3 +209,11 @@ Open question 1 (judge model) is answered by 0.3. Question 2 (timing): building 
   - Deleting the stale memory with `delete_memory` resolved `superseded` on the next check, the loop lab 3 will teach.
   - 74 unit tests, 27 of them new; `check_web_grants.py` passes 38/38.
 - **Known false positive:** the task-completion email preference is judged "superseded" by the general one. It's harmless: deleting it keeps the broader rule.
+
+### Step 2 (seeds that reproduce every finding)
+- **`companion/conversations/support_03.yaml`** is one exchange: Alice's mixed question, replayed with a scripted reply but a real search. Seeds run in file-name order, so it comes last.
+- **`seed.py`** runs `run_check` (judge = `AIM_LLM_MODEL`) after the conversations. `--no-check` skips it. `--reset` now clears check runs too, since their findings name memories that no longer exist. The judgment cache stays, because it's keyed by content and still valid.
+- **Verified on a fresh `seed.py --reset`:**
+  - Findings: 4 crowded conversations, 5 duplicate clusters, 6 superseded, 6 transient, 2 scope mismatches.
+  - The support_03 turn reproduces the 04:25 miss deterministically. The email-only preference isn't in the top 10. Its five prompt slots went to an "awaiting reply" question, the stale us-east-1 fact, the correction, a near-copy of the correction, and one guideline. `crowded_turn` reports "3 of 5".
+- **Label fix:** a memory that is both transient and "answered" later is now labelled transient inside `crowded_turn` too, matching `drop_overlaps`.

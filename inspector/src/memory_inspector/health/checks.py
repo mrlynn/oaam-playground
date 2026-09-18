@@ -205,10 +205,12 @@ def check_crowded_turns(turns: list[TurnInput], outcome: PairOutcome, transient_
         wasted: dict[str, str] = {}
         seen_groups: set[int] = set()
         for i in ids:
-            if i in outcome.stale:
-                wasted[i] = "stale"
-            elif i in transient_ids:
+            # Transient first: a pending question later "answered" is reported as
+            # transient, not superseded (drop_overlaps), so label it the same here.
+            if i in transient_ids:
                 wasted[i] = "transient"
+            elif i in outcome.stale:
+                wasted[i] = "stale"
             elif i in outcome.duplicate_group:
                 g = outcome.duplicate_group[i]
                 if g in seen_groups:

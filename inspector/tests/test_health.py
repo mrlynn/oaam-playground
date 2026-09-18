@@ -132,6 +132,13 @@ def test_crowded_turns_are_one_finding_per_conversation():
     assert "turns 3, 4" in f.detail
 
 
+def test_a_memory_both_stale_and_transient_is_labelled_transient():
+    outcome = PairOutcome(stale={"asked": "east"})
+    (f,) = checks.check_crowded_turns([TurnInput("r", 1, "u1", retrieved("asked", "east", "p9"))],
+                                      outcome, {"asked", "p9"}, {"asked", "east", "p9"})
+    assert f.evidence["turns"][0]["wasted"] == {"asked": "transient", "p9": "transient"}
+
+
 def test_one_wasted_duplicate_alone_is_not_a_crowded_turn():
     outcome = PairOutcome(duplicate_group={"p1": 0, "p2": 0})
     assert checks.check_crowded_turns([TurnInput("r", 1, "u1", retrieved("p1", "p2", "west"))],

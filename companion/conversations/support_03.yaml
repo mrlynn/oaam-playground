@@ -1,0 +1,13 @@
+# Alice comes back with one question that mixes two topics. Replayed after
+# onboarding_01 and support_01 (seeds run in file-name order), so her store
+# already holds the stale bucket region, its correction, duplicate contact
+# preferences and "awaiting reply" memories. In a live run on 2026-09-18 this
+# question pushed the email-only preference out of the top 10 (friction 04:25);
+# the health check's crowded_turn finding should point at this turn.
+user_id: u_alice
+agent_id: support_bot
+messages:
+  - role: user
+    content: "Which region is my export bucket in, and how should you contact me?"
+  - role: assistant
+    content: "Your export bucket is in us-west-2. I'll contact you by email only, never by phone."
