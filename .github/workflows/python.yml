@@ -1,0 +1,43 @@
+# Run the Python test suites on every change to the inspector or the companion.
+# The companion installs the inspector from ../inspector, so a change to either
+# runs both. No database, model or API key needed: the suites use fakes and
+# recorded fixtures.
+name: python
+
+on:
+  push:
+    branches: [main]
+    paths: ['inspector/**', 'companion/**', '.github/workflows/python.yml']
+  pull_request:
+    paths: ['inspector/**', 'companion/**', '.github/workflows/python.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [inspector, companion]
+    name: test (${{ matrix.package }})
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: ${{ matrix.package }}/uv.lock
+      # --locked fails if uv.lock is out of date with pyproject.toml.
+      - name: Install
+        run: uv sync --locked
+      - name: Tests
+        run: uv run pytest -q
