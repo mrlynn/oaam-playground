@@ -77,7 +77,7 @@ Distance finds candidates but can't tell them apart. These are real pairs from t
 
 The contradiction sits closer than the legitimate pair. Any cutoff that catches one catches the other.
 
-So an LLM reads each pair (older one first, with both memory types) and answers in JSON with one relation, which side is current if it's a supersession, and one sentence of rationale. It also reads each memory that might be conversation state (anything matching a pattern like "awaiting" or "asked", plus every free-form `memory`-type memory) and says durable or transient.
+So an LLM reads each pair (older one first, with both memory types) and answers in JSON with one relation, which side is current if it's a supersession, and one sentence of rationale. It also reads each memory that might be conversation state (anything matching a pattern like "awaiting", "asked", "again" or "unresolved", plus every free-form `memory`-type memory) and says durable or transient. That candidate pattern (`JUDGE_PATTERN`) is wider than the one that makes a finding on its own in no-judge mode (`TRANSIENT_PATTERN`), because a false match only costs a cached judge call.
 
 How the judge is kept honest:
 - **Cached by content.** A verdict is stored in `AIM_JUDGMENTS` under a hash of the prompt version, the model and the exact text judged. Rerun the check and you get the same answer with zero model calls. Edit a memory and it's judged again. This matters because newer models reject `temperature=0`, so caching is the only way to get stable answers.
@@ -115,7 +115,7 @@ A run is compared only with the previous run that has **the same scope and the s
 ## Trade-offs
 
 - **The judge can be wrong.** It's an LLM. Mitigations: agreement is measured, verdicts are labelled "LLM judgment · model" with their rationale in every finding, the fix text says to read before deleting, and the dashboard never deletes anything itself.
-- **Thresholds were tuned on seed data.** 0.15 cosine and the transient patterns came from 34 seed memories. They're recorded with every run, and re-checking them on real companion data (`aim_live`) is the last open M4 item.
+- **Thresholds were tuned on seed data.** 0.15 cosine and the transient patterns came from 34 seed memories. They're recorded with every run. The patterns have now met real use: on `aim_live`, "has asked about X again", "X remains unresolved" and "the user asks about…" were typed as facts, so `JUDGE_PATTERN` gained "asks", "again", "unresolved", "remains open/unanswered/unclear" and "as of the latest" (it adds no candidates on the seeds). The 0.15 threshold is still unchecked on real data: `aim_live` is too small to have close pairs yet.
 - **Cost.** One model call per new pair and per new candidate memory. On the seeds that's about 18–24 calls for a first run and 0 for a rerun. A store with thousands of memories and many close pairs costs proportionally more on its first run.
 - **It sees only what's stored.** "Crowded turn" needs the run log, so it only covers instrumented turns. With `record_prompt` it knows what reached the prompt. Without it, it counts everything search returned and says so.
 - **Deterministic mode is narrow on purpose.** Without a judge, a pair is only called superseded when the newer memory says it corrects the older one. Everything else is reported unclassified, never guessed.

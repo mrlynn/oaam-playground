@@ -289,3 +289,14 @@ def test_a_duplicate_never_keeps_a_transient_copy():
     out = checks.check_pairs(pairs, {(p.older.id, p.newer.id): v("duplicate") for p in pairs}, transient={"p2"})
     (f,) = out.findings
     assert f.evidence["keep"] != "p2" and 'delete_memory("p2")' not in f.suggestion
+
+
+def test_the_judge_reads_real_use_phrasings_that_are_not_findings_on_their_own():
+    # From aim_live: typed "fact", so only the wording could make them candidates.
+    again = mem("a1", "The user has asked about 'Oracle AI Agent Memory' again after a previous inquiry.")
+    unresolved = mem("a2", "As of the latest exchange, the question of what it is remains unresolved.")
+    habit = mem("a3", "The user asks the assistant about their calendar and daily schedule.")
+    durable = mem("a4", "User prefers email over phone.", "preference")
+    assert [m.id for m in checks.transient_candidates([again, unresolved, habit, durable])] == ["a1", "a2", "a3"]
+    # Without a judge, a wider word is not a finding: "asks" alone says nothing.
+    assert checks.check_transient([habit], {"a3": None}) == []
