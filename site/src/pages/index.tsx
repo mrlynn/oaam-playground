@@ -1,4 +1,5 @@
 import Link from '@docusaurus/Link';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Heading from '@theme/Heading';
 import Layout from '@theme/Layout';
 
@@ -6,12 +7,13 @@ import TurnReplay from '@site/src/components/replay/TurnReplay';
 import s from './index.module.css';
 
 const NEXT = [
-  {to: '/docs/tutorial/first-run', title: 'See it work', body: 'From a clean machine to the dashboard, in about fifteen minutes.'},
-  {to: '/docs/how-to/instrument-your-agent', title: 'Add it to your agent', body: 'One inspect() call around your memory client. Two lines if you also report the prompt.'},
-  {to: '/docs/friction', title: 'What we learned', body: 'Five fixes the package could make, each with a script that reproduces the problem.'},
+  {to: '/tutorial/first-run', title: 'See it work', body: 'From a clean machine to the dashboard, in about fifteen minutes.'},
+  {to: '/how-to/instrument-your-agent', title: 'Add it to your agent', body: 'One inspect() call around your memory client. Two lines if you also report the prompt.'},
+  {to: '/friction', title: 'What we learned', body: 'Five fixes the package could make, each with a script that reproduces the problem.'},
 ];
 
 export default function Home() {
+  const docs = `/${useDocusaurusContext().siteConfig.customFields?.docsRoute ?? 'docs'}`;
   return (
     <Layout description="A memory debugger for Oracle AI Agent Memory: see what an agent remembered, which memories reached the prompt, and what's wrong with the store.">
       <main className="container margin-vert--lg">
@@ -37,7 +39,7 @@ export default function Home() {
           </Link>
           <div className={s.cards}>
             {NEXT.map((n) => (
-              <Link key={n.to} to={n.to} className={s.card}>
+              <Link key={n.to} to={docs + n.to} className={s.card}>
                 <strong>{n.title}</strong>
                 <span>{n.body}</span>
               </Link>

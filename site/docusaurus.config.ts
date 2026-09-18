@@ -10,11 +10,23 @@ import remarkRepoLinks from './plugins/remark-repo-links.mjs';
 // its replay uses the dashboard's own logic from ../web/src/lib.
 
 const REPO = 'https://github.com/mrlynn/oaam-playground';
+
+// SITE_MODE=demo builds the copy ./demo.sh serves behind the inspector at
+// localhost:3000/docs, next to the chat and the inspector, with links to both.
+// Its guide lives at /docs/guide/... rather than /docs/docs/.... The default is
+// the GitHub Pages site.
+const DEMO = process.env.SITE_MODE === 'demo';
+const DOCS_ROUTE = DEMO ? 'guide' : 'docs';
+// Same-origin pages outside this site. Docusaurus prefixes baseUrl to every link it
+// builds (pathname:// included), so these are raw HTML items it passes through.
+const app = (path: string, label: string) => ({
+  type: 'html' as const, position: 'left' as const, value: `<a class="navbar__item navbar__link" href="${path}">${label}</a>`,
+});
 const repoDir = path.resolve(__dirname, '..');
 const docsDir = path.join(repoDir, 'docs');
 
 const config: Config = {
-  title: 'Agent memory inspector',
+  title: DEMO ? 'Docs · Agent Memory Playground' : 'Agent memory inspector',
   tagline: 'See what an agent remembered, and why it said what it said.',
   favicon: 'img/favicon.svg',
 
@@ -22,8 +34,9 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://mrlynn.github.io',
-  baseUrl: '/oaam-playground/',
+  url: DEMO ? 'http://localhost:3000' : 'https://mrlynn.github.io',
+  baseUrl: DEMO ? '/docs/' : '/oaam-playground/',
+  customFields: {docsRoute: DOCS_ROUTE, demo: DEMO},
   organizationName: 'mrlynn',
   projectName: 'oaam-playground',
   trailingSlash: false,
@@ -46,7 +59,7 @@ const config: Config = {
       {
         docs: {
           path: docsDir,
-          routeBasePath: 'docs',
+          routeBasePath: DOCS_ROUTE,
           sidebarPath: './sidebars.ts',
           editUrl: `${REPO}/edit/main/docs/`,
           beforeDefaultRemarkPlugins: [[remarkRepoLinks, {docsDir, repoDir, blobBase: `${REPO}/blob/main`}]],
@@ -69,12 +82,18 @@ const config: Config = {
   themeConfig: {
     colorMode: {respectPrefersColorScheme: true},
     navbar: {
-      title: 'Agent memory inspector',
-      logo: {alt: '', src: 'img/favicon.svg'},
+      // In the demo the brand goes to the playground's home (/), outside this site, so it's
+      // the same markup as a raw HTML item instead of the built-in brand.
+      ...(DEMO ? {} : {title: 'Agent memory inspector', logo: {alt: '', src: 'img/favicon.svg'}}),
       items: [
-        {to: '/replay', label: 'Replay', position: 'left'},
+        ...(DEMO ? [
+          {type: 'html' as const, position: 'left' as const,
+           value: '<a class="navbar__brand" href="/"><b class="navbar__title text--truncate">Agent Memory Playground</b></a>'},
+          app('/chat', 'Chat'), app('/runs', 'Runs'), app('/memories', 'Memory'),
+        ] : []),
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
-        {to: '/docs/friction', label: 'What we learned', position: 'left'},
+        {to: '/replay', label: 'Replay', position: 'left'},
+        {to: `/${DOCS_ROUTE}/friction`, label: 'What we learned', position: 'left'},
         {href: REPO, label: 'GitHub', position: 'right'},
       ],
     },
